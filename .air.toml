@@ -1,9 +1,9 @@
 root = "."
-tmp_dir = "tmp"
+tmp_dir = "dist/bin"
 
 [build]
-  bin = "./tmp/main"
-  cmd = "go build -o ./dist/bin/gin-stater ./cmd/server/main.go"
+  bin = "./dist/bin/gin-stater"
+  cmd = "go build -ldflags=\"-s -w\" -o ./dist/bin/gin-stater ./cmd/cli/main.go"
   delay = 1000
   exclude_dir = ["deploy", "dist", "script", "test"]
   exclude_file = []

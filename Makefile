@@ -15,8 +15,8 @@ help: ## Show this help.
 .PHONY: install
 install: ## Install dependencies.
 	$(info ******************** installing dependencies ********************)
-	go install github.com/cosmtrek/air@latest
-	go install github.com/pressly/goose/v3/cmd/goose@latest
+	$(GOCMD) install github.com/cosmtrek/air@latest
+	$(GOCMD) install github.com/pressly/goose/v3/cmd/goose@latest
 
 .PHONY: start
 start: ## Start dev server.
@@ -34,16 +34,8 @@ fmt: ## Format all code.
 .PHONY: build
 build: ## Build binaries
 	$(info ******************** building binaries ********************)
-	GO111MODULE=on $(GOCMD) build -o ./dist/bin/$(APP_NAME) ./cmd/server/main.go
-#	GO111MODULE=on $(GOCMD) build -o ./dist/bin/$(APP_NAME)-client ./cmd/client/main.go
+	GO111MODULE=on $(GOCMD) build -ldflags="-s -w" -o ./dist/bin/$(APP_NAME) ./cmd/cli/main.go
 	@chmod u+x dist/bin/$(APP_NAME)
-#	@chmod u+x dist/bin/$(APP_NAME)-client
-
-#	errcheck -ignoretests ./cmd/client/main.go
-#	go vet ./cmd/client/main.go
-#	golangci-lint run -v ./cmd/client/main.go
-
-# 	go build -ldflags="-s -w" -o cmd/my-app ./cmd/main.go
 
 .PHONY: clean
 clean: ## Remove all binaries.
@@ -53,20 +45,23 @@ clean: ## Remove all binaries.
 .PHONY: test
 test: ## Run the tests of the project.
 	$(info ******************** running tests ********************)
-	go test -coverprofile=log/coverage_${APP_VERSION}.out -v ./...
-	go tool cover -html=log/coverage_${APP_VERSION}.html
+	$(GOCMD) test -coverprofile=log/coverage_${APP_VERSION}.out -v ./...
+	$(GOCMD) tool cover -html=log/coverage_${APP_VERSION}.html
 
-# .PHONY: check
-# check: ## Run precke before release
-# 	$(info ******************** checking before commit ********************)
-# 	goreleaser --snapshot --skip-publish --clean
+.PHONY: check
+check: ## Run precke before committing
+	$(info ******************** checking before committing ********************)
+# 	use git commit hook to check before commiting the code into git
+	.git/hooks/prepare-commit-msg .
+
+#	goreleaser --snapshot --skip-publish --clean
 
 .PHONY: lint
 lint:  ## Run all available linters.
 	$(info ******************** running lint tools ********************)
-	errcheck -ignoretests ./cmd/server/main.go
-	go vet ./cmd/server/main.go
-	golangci-lint run -v ./cmd/server/main.go
+	errcheck -ignoretests ./cmd/cli/main.go
+	$(GOCMD) vet ./cmd/cli/main.go
+	golangci-lint run -v ./cmd/cli/main.go
 
 # .PHONY: release
 # release: ## Check before release
