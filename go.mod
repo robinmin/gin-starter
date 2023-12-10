@@ -1,4 +1,4 @@
-module github.com/robinmin/gin-stater
+module github.com/robinmin/gin-starter
 
 go 1.21.4
 

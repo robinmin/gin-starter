@@ -1,4 +1,4 @@
-## gin-stater
+## gin-starter
 
 #### Features
 

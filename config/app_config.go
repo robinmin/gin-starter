@@ -3,7 +3,7 @@ package config
 import (
 	"fmt"
 
-	"github.com/robinmin/gin-stater/pkg/utility"
+	"github.com/robinmin/gin-starter/pkg/utility"
 )
 
 const AppName = "dragondoat"

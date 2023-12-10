@@ -1,7 +1,7 @@
 GOCMD=go
 GOTEST=$(GOCMD) test
 GOVET=$(GOCMD) vet
-APP_NAME=gin-stater
+APP_NAME=gin-starter
 APP_VERSION?=0.0.1
 SERVICE_PORT?=3000
 
