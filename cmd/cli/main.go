@@ -21,5 +21,6 @@ func main() {
 func run(logger *log.Logger) error {
 	// var cfg config
 	log.Debug("Server starting......")
+
 	return nil
 }

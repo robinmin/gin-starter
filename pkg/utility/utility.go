@@ -1,14 +1,14 @@
 package utility
 
 import (
-	"io/ioutil"
+	"os"
 
 	"gopkg.in/yaml.v3"
 )
 
 // LoadConfig 从指定的YAML文件中加载配置信息
 func LoadConfig[T any](yamlFile string) (*T, error) {
-	data, err := ioutil.ReadFile(yamlFile)
+	data, err := os.ReadFile(yamlFile)
 	if err != nil {
 		return nil, err
 	}
@@ -29,7 +29,7 @@ func SaveConfig[T any](cfg *T, yamlFile string) error {
 		return err
 	}
 
-	err = ioutil.WriteFile(yamlFile, data, 0644)
+	err = os.WriteFile(yamlFile, data, 0644)
 	if err != nil {
 		return err
 	}
