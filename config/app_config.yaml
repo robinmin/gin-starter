@@ -1,0 +1,15 @@
+system:
+  debug_mode: false
+  server_address: :7086
+  enable_cors: true
+  enable_auth: true
+  external_svr_address: http://localhost:7086/
+database:
+  # dbtype: mysql
+  # dbhost: 127.0.0.1
+  # dbname: temp
+  # dbport: 3306
+  # dbuser: user
+  # dbpassword: password
+  dbtype: sqlite3
+  dbname: log/app.db
