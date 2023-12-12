@@ -4,6 +4,7 @@ system:
   enable_cors: true
   enable_auth: true
   external_svr_address: http://localhost:7086/
+  trusted_proxies: 127.0.0.1;10.0.0.0/8
 database:
   # dbtype: mysql
   # dbhost: 127.0.0.1
