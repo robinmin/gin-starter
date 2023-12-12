@@ -1,30 +1,31 @@
 package main
 
 import (
-	log "log/slog"
+	"fmt"
 	"os"
-	"runtime/debug"
 
 	"github.com/robinmin/gin-starter/config"
+	"github.com/robinmin/gin-starter/pkg/bootstrap"
 )
 
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 func main() {
-	config.Setup("config/app_config.yaml")
-
-	logger := log.New(log.NewTextHandler(os.Stdout, &log.HandlerOptions{Level: log.LevelDebug}))
-
-	err := run(logger)
-	if err != nil {
-		trace := string(debug.Stack())
-		logger.Error(err.Error(), "trace", trace)
+	cfg, err0 := bootstrap.LoadConfig[config.AppConfig]("config/app_config.yaml")
+	if err0 != nil {
+		fmt.Println("Failed to load yaml config file: " + err0.Error())
 		os.Exit(1)
 	}
-}
 
-func run(logger *log.Logger) error {
-	// var cfg config
-	log.Debug("Server starting......")
+	app, err := bootstrap.NewApplication[config.AppConfig](cfg, "log/gin-starter.log")
+	if err != nil {
+		fmt.Println("Failed to create an application instance on startup: " + err.Error())
+		os.Exit(1)
+	}
+	defer app.Quit()
 
-	return nil
+	err = app.RunServer(app.Config.System.ServerAddr)
+	if err != nil {
+		app.Logger.Error(err.Error())
+		os.Exit(1)
+	}
 }
