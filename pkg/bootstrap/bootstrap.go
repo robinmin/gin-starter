@@ -69,9 +69,12 @@ func NewApplication[T any](cfg *T, logFile string) (*Application[T], error) {
 	app.engine = gin.New()
 	// The middleware will log all requests attributes.
 	app.engine.Use(sloggin.NewWithConfig(app.Logger, config), gin.Recovery())
-	// app.engine.ForwardedByClientIP = true
-	// app.engine.SetTrustedProxies([]string{"127.0.0.1"})
-	// app.engine.SetTrustedProxies(strings.Split(app.Config.System.TrustedProxies, ";"))
+	app.engine.ForwardedByClientIP = true
+
+	// if err := app.engine.SetTrustedProxies(strings.Split(app.Config.System.TrustedProxies, ";")); err != nil {
+	if err := app.engine.SetTrustedProxies([]string{"127.0.0.1"}); err != nil {
+		app.Logger.Warn("Failed to set trusted proxies")
+	}
 
 	if gin.IsDebugging() {
 		gin.ForceConsoleColor()
