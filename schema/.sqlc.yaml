@@ -1,0 +1,14 @@
+version: "2"
+sql:
+  - engine: "sqlite"
+    schema: "01_schema.sql"
+    queries: "02_query.sql"
+    database:
+      uri: file:authors?mode=memory&cache=shared
+    rules:
+    - sqlc/db-prepare
+    gen:
+      go:
+        package: "dbo"
+        out: "internal/dbo"
+
