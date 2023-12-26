@@ -4,6 +4,7 @@ A simple starter to create Gin based applications.
 
 #### Features
 - log/slog : new standard logging mechanism
+- enable sqlc for db schema and migration management mechanism
 
 #### To do list
 
