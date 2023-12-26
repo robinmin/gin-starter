@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"net/http"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -27,9 +28,20 @@ const (
 	defaultShutdownPeriod = 30 * time.Second
 )
 
-type Application[T any] struct {
+type ApplicationConfig struct {
+	// Configuration of log file
+	LogFileName string
+
+	// Configuration of server trusted proxies
+	TrustedProxies string
+
+	// verbose flag
+	Verbose bool
+}
+
+type Application struct {
 	// Configuration
-	Config *T
+	Config ApplicationConfig
 
 	// Engine instance
 	engine *gin.Engine
@@ -37,8 +49,7 @@ type Application[T any] struct {
 	// DB instance
 	// DB     *database.DB
 
-	// log
-	logFileName    string
+	// log instance
 	logFileHandler *os.File
 	Logger         *slog.Logger
 
@@ -47,13 +58,13 @@ type Application[T any] struct {
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-func NewApplication[T any](cfg *T, logFile string) (*Application[T], error) {
-	app := &Application[T]{Config: cfg}
+func NewApplication(cfg *ApplicationConfig) (*Application, error) {
+	app := &Application{}
 
 	opts := &slog.HandlerOptions{
 		Level: slog.LevelDebug,
 	}
-	writer := app.createLogWriter(logFile)
+	writer := app.createLogWriter(cfg.LogFileName)
 	if writer == nil {
 		gin.DefaultWriter = os.Stdout
 	} else {
@@ -71,8 +82,13 @@ func NewApplication[T any](cfg *T, logFile string) (*Application[T], error) {
 	app.engine.Use(sloggin.NewWithConfig(app.Logger, config), gin.Recovery())
 	app.engine.ForwardedByClientIP = true
 
-	// if err := app.engine.SetTrustedProxies(strings.Split(app.Config.System.TrustedProxies, ";")); err != nil {
-	if err := app.engine.SetTrustedProxies([]string{"127.0.0.1"}); err != nil {
+	var err error
+	if cfg.TrustedProxies == "" {
+		err = app.engine.SetTrustedProxies([]string{"127.0.0.1"})
+	} else {
+		err = app.engine.SetTrustedProxies(strings.Split(cfg.TrustedProxies, ";"))
+	}
+	if err != nil {
 		app.Logger.Warn("Failed to set trusted proxies")
 	}
 
@@ -91,7 +107,7 @@ func NewApplication[T any](cfg *T, logFile string) (*Application[T], error) {
 	return app, nil
 }
 
-func (app *Application[T]) createLogWriter(filename string) io.Writer {
+func (app *Application) createLogWriter(filename string) io.Writer {
 	var writers []io.Writer
 	if gin.IsDebugging() {
 		writers = append(writers, os.Stdout)
@@ -110,14 +126,13 @@ func (app *Application[T]) createLogWriter(filename string) io.Writer {
 			fmt.Println("Failed to open log file: %w", err)
 			return nil
 		}
-		app.logFileName = filename
 	}
 
 	writers = append(writers, app.logFileHandler)
 	return io.MultiWriter(writers...)
 }
 
-func (app *Application[T]) RunServer(addr string) error {
+func (app *Application) RunServer(addr string) error {
 	srv := &http.Server{
 		Addr:         addr,
 		Handler:      app.engine,
@@ -158,7 +173,7 @@ func (app *Application[T]) RunServer(addr string) error {
 	return nil
 }
 
-func (app *Application[T]) Quit() {
+func (app *Application) Quit() {
 	// close log file handler when application exits
 	if app.logFileHandler != nil {
 		err := app.logFileHandler.Close()
