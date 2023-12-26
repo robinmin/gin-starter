@@ -17,6 +17,7 @@ install: ## Install dependencies.
 	$(info ******************** installing dependencies ********************)
 	$(GOCMD) install github.com/cosmtrek/air@latest
 	$(GOCMD) install github.com/pressly/goose/v3/cmd/goose@latest
+	$(GOCMD) install github.com/sqlc-dev/sqlc/cmd/sqlc@latest
 
 .PHONY: start
 start: ## Start dev server.
@@ -68,7 +69,7 @@ lint:  ## Run all available linters.
 # 	$(info ******************** checking before release ********************)
 # 	goreleaser release --clean
 
-# .PHONY: generate
-# generate: ## Generate code from SQL file by sqlc
-# 	$(info ******************** generating code from sql ********************)
-# 	sqlc generate
+.PHONY: generate
+generate: ## Generate code from SQL file by sqlc
+	$(info ******************** generating code from sql ********************)
+	sqlc -f ./schema/.sqlc.yaml generate
