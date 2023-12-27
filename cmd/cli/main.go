@@ -56,8 +56,8 @@ func main() {
 				Verbose:        verbose,
 			}
 		}),
-		fx.Provide(func(cfg *config.AppConfig) *bootstrap.LoggerParams {
-			return &bootstrap.LoggerParams{
+		fx.Provide(func(cfg *config.AppConfig) bootstrap.LoggerParams {
+			return bootstrap.LoggerParams{
 				LogFileName:  fmt.Sprintf("log/gin-starter-%s.log", time.Now().Format("20060102")),
 				DefaultLevel: slog.LevelDebug,
 				Config: sloggin.Config{
@@ -66,8 +66,8 @@ func main() {
 				},
 			}
 		}),
-		fx.Provide(func(cfg *config.AppConfig) *bootstrap.DBParams {
-			return &bootstrap.DBParams{
+		fx.Provide(func(cfg *config.AppConfig) bootstrap.DBParams {
+			return bootstrap.DBParams{
 				Type:     cfg.Database.Type,
 				Host:     cfg.Database.Host,
 				Port:     cfg.Database.Port,
