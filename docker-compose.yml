@@ -1,0 +1,51 @@
+version: "3.9"
+services:
+  # db:
+  #   container_name: skeleton-db
+  #   image: postgres:14-alpine
+  #   command:
+  #     ["postgres", "-c", "log_statement=all", "-c", "log_destination=stderr"]
+  #   restart: always
+  #   environment:
+  #     - POSTGRES_DB=skeleton
+  #     - POSTGRES_USER=docker
+  #     - POSTGRES_PASSWORD=docker
+  #   ports:
+  #     - "5432:5432"
+  #   volumes:
+  #     - skeleton-data:/var/lib/postgresql/data
+  #   healthcheck:
+  #     test: "pg_isready -U postgres -d artwork"
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 5
+  # migrate:
+  #   container_name: skeleton-migrate
+  #   image: migrate/migrate
+  #   volumes:
+  #     - ./deploy/migrations:/migrations
+  #   command:
+  #     [
+  #       "-path",
+  #       "/migrations",
+  #       "-database",
+  #       "postgres://docker:docker@db:5432/skeleton?sslmode=disable",
+  #       "up",
+  #     ]
+  #   depends_on:
+  #     db:
+  #       condition: service_healthy
+  app:
+    container_name: gin-starter
+    env_file:
+      - .env
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    # depends_on:
+    #   db:
+    #     condition: service_healthy
+volumes:
+  gin-starter-data:
