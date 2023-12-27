@@ -2,7 +2,6 @@ package bootstrap
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -13,9 +12,10 @@ import (
 	"time"
 
 	"os"
-	"sync"
 
+	status "github.com/appleboy/gin-status-api"
 	sloggin "github.com/samber/slog-gin"
+	"go.uber.org/fx"
 
 	"github.com/gin-gonic/gin"
 	"gopkg.in/yaml.v3"
@@ -28,86 +28,18 @@ const (
 	defaultShutdownPeriod = 30 * time.Second
 )
 
-type ApplicationConfig struct {
-	// Configuration of log file
-	LogFileName string
+// ////////////////////////////////////////////////////////////////////////////////////////////////////////////
+type LoggerParams struct {
+	// fx.In
 
-	// Configuration of server trusted proxies
-	TrustedProxies string
-
-	// verbose flag
-	Verbose bool
+	LogFileName  string
+	DefaultLevel slog.Level
+	Config       sloggin.Config
 }
 
-type Application struct {
-	// Configuration
-	Config ApplicationConfig
+var __logFileHandler *os.File
 
-	// Engine instance
-	engine *gin.Engine
-
-	// DB instance
-	// DB     *database.DB
-
-	// log instance
-	logFileHandler *os.File
-	Logger         *slog.Logger
-
-	wg sync.WaitGroup
-}
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-func NewApplication(cfg *ApplicationConfig) (*Application, error) {
-	app := &Application{}
-
-	opts := &slog.HandlerOptions{
-		Level: slog.LevelDebug,
-	}
-	writer := app.createLogWriter(cfg.LogFileName)
-	if writer == nil {
-		gin.DefaultWriter = os.Stdout
-	} else {
-		gin.DefaultWriter = writer
-	}
-	app.Logger = slog.New(slog.NewTextHandler(gin.DefaultWriter, opts)) //.With("gin_mode", gin.EnvGinMode)
-
-	config := sloggin.Config{
-		WithSpanID:  true,
-		WithTraceID: true,
-	}
-
-	app.engine = gin.New()
-	// The middleware will log all requests attributes.
-	app.engine.Use(sloggin.NewWithConfig(app.Logger, config), gin.Recovery())
-	app.engine.ForwardedByClientIP = true
-
-	var err error
-	if cfg.TrustedProxies == "" {
-		err = app.engine.SetTrustedProxies([]string{"127.0.0.1"})
-	} else {
-		err = app.engine.SetTrustedProxies(strings.Split(cfg.TrustedProxies, ";"))
-	}
-	if err != nil {
-		app.Logger.Warn("Failed to set trusted proxies")
-	}
-
-	if gin.IsDebugging() {
-		gin.ForceConsoleColor()
-	} else {
-		// 禁用控制台颜色，将日志写入文件时不需要控制台颜色。
-		gin.DisableConsoleColor()
-	}
-
-	// Example pong request.
-	app.engine.GET("/pong", func(c *gin.Context) {
-		c.String(http.StatusOK, "pong")
-	})
-
-	return app, nil
-}
-
-func (app *Application) createLogWriter(filename string) io.Writer {
+func createLogWriter(filename string) io.Writer {
 	var writers []io.Writer
 	if gin.IsDebugging() {
 		writers = append(writers, os.Stdout)
@@ -117,26 +49,118 @@ func (app *Application) createLogWriter(filename string) io.Writer {
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println("Current working directory:", cwd)
+	fmt.Println("Current working directory: ", cwd)
 
-	if app.logFileHandler == nil {
+	if __logFileHandler == nil {
 		var err error
-		app.logFileHandler, err = os.OpenFile(filename, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0666)
+		__logFileHandler, err = os.OpenFile(filename, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0666)
 		if err != nil {
 			fmt.Println("Failed to open log file: %w", err)
 			return nil
 		}
 	}
 
-	writers = append(writers, app.logFileHandler)
+	writers = append(writers, __logFileHandler)
 	return io.MultiWriter(writers...)
 }
 
-func (app *Application) RunServer(addr string) error {
+func closeLogFile() {
+	if __logFileHandler != nil {
+		__logFileHandler.Close()
+		__logFileHandler = nil
+	}
+}
+
+func NewLogger(params LoggerParams, lc fx.Lifecycle) *slog.Logger {
+	opts := &slog.HandlerOptions{
+		Level: params.DefaultLevel,
+	}
+	writer := createLogWriter(params.LogFileName)
+	if writer == nil {
+		gin.DefaultWriter = os.Stdout
+	} else {
+		gin.DefaultWriter = writer
+	}
+	lc.Append(fx.Hook{
+		OnStart: func(ctx context.Context) error {
+			return nil
+		},
+		OnStop: func(ctx context.Context) error {
+			closeLogFile()
+			return nil
+		},
+	})
+	return slog.New(slog.NewTextHandler(gin.DefaultWriter, opts))
+}
+
+// /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+type ApplicationConfig struct {
+	// Configuration of server trusted proxies
+	TrustedProxies string
+
+	// Configuration of server address
+	ServerAddr string
+
+	// verbose flag
+	Verbose bool
+}
+
+type Application struct {
+	// Configuration
+	Config *ApplicationConfig
+
+	// Engine instance
+	engine *gin.Engine
+
+	// DB instance
+	// DB     *database.DB
+}
+
+func NewApplication(logger *slog.Logger, logParam LoggerParams, cfg *ApplicationConfig) *Application {
+	app := &Application{
+		Config: cfg,
+	}
+
+	app.engine = gin.New()
+	// The middleware will log all requests attributes.
+	app.engine.Use(sloggin.NewWithConfig(logger, logParam.Config), gin.Recovery())
+	app.engine.ForwardedByClientIP = true
+
+	var err error
+	if cfg.TrustedProxies == "" {
+		err = app.engine.SetTrustedProxies([]string{"127.0.0.1"})
+	} else {
+		err = app.engine.SetTrustedProxies(strings.Split(cfg.TrustedProxies, ";"))
+	}
+	if err != nil {
+		logger.Warn("Failed to set trusted proxies")
+	}
+
+	if gin.IsDebugging() {
+		gin.ForceConsoleColor()
+	} else {
+		// 禁用控制台颜色，将日志写入文件时不需要控制台颜色。
+		gin.DisableConsoleColor()
+	}
+
+	// default status api
+	app.engine.GET("/status", status.GinHandler)
+
+	return app
+}
+
+type HttpServerParams struct {
+	fx.In
+
+	Lifecycle fx.Lifecycle
+	App       *Application
+}
+
+func NewHttpServer(params HttpServerParams, logger *slog.Logger) *http.Server {
 	srv := &http.Server{
-		Addr:         addr,
-		Handler:      app.engine,
-		ErrorLog:     slog.NewLogLogger(app.Logger.Handler(), slog.LevelWarn),
+		Addr:         params.App.Config.ServerAddr,
+		Handler:      params.App.engine,
+		ErrorLog:     slog.NewLogLogger(logger.Handler(), slog.LevelWarn),
 		IdleTimeout:  defaultIdleTimeout,
 		ReadTimeout:  defaultReadTimeout,
 		WriteTimeout: defaultWriteTimeout,
@@ -155,33 +179,33 @@ func (app *Application) RunServer(addr string) error {
 		shutdownErrorChan <- srv.Shutdown(ctx)
 	}()
 
-	app.Logger.Info("starting server", slog.Group("server", "addr", srv.Addr))
+	params.Lifecycle.Append(fx.Hook{
+		OnStart: func(context.Context) error {
+			logger.Info("Starting server", slog.Group("server", "addr", srv.Addr))
 
-	err := srv.ListenAndServe()
-	if !errors.Is(err, http.ErrServerClosed) {
-		return err
-	}
+			go func() {
+				err := srv.ListenAndServe()
+				if err != nil && err != http.ErrServerClosed {
+					shutdownErrorChan <- err
+				}
+			}()
 
-	err = <-shutdownErrorChan
-	if err != nil {
-		return err
-	}
+			logger.Info("Succeeded to start HTTP Server at", slog.Group("server", "addr", srv.Addr))
+			return nil
+		},
+		OnStop: func(ctx context.Context) error {
+			logger.Info("Stopped server", slog.Group("server", "addr", srv.Addr))
 
-	app.Logger.Info("stopped server", slog.Group("server", "addr", srv.Addr))
+			err := <-shutdownErrorChan
+			if err != nil {
+				return err
+			}
 
-	app.wg.Wait()
-	return nil
-}
+			return srv.Shutdown(ctx)
+		},
+	})
 
-func (app *Application) Quit() {
-	// close log file handler when application exits
-	if app.logFileHandler != nil {
-		err := app.logFileHandler.Close()
-		if err != nil {
-			fmt.Println("Failed to close log file: %w", err)
-		}
-		app.logFileHandler = nil
-	}
+	return srv
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
