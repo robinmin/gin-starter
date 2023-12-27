@@ -4,7 +4,6 @@ import (
 	"flag"
 	"fmt"
 	"log/slog"
-	"net/http"
 	"time"
 
 	"github.com/robinmin/gin-starter/config"
@@ -47,7 +46,7 @@ func main() {
 		return
 	}
 
-	app := fx.New(
+	svr := fx.New(
 		// configurations for logger and config file items
 		fx.Provide(NewAppConfig),
 		fx.Provide(func(cfg *config.AppConfig) *bootstrap.ApplicationConfig {
@@ -57,8 +56,8 @@ func main() {
 				Verbose:        verbose,
 			}
 		}),
-		fx.Provide(func(cfg *config.AppConfig) bootstrap.LoggerParams {
-			return bootstrap.LoggerParams{
+		fx.Provide(func(cfg *config.AppConfig) *bootstrap.LoggerParams {
+			return &bootstrap.LoggerParams{
 				LogFileName:  fmt.Sprintf("log/gin-starter-%s.log", time.Now().Format("20060102")),
 				DefaultLevel: slog.LevelDebug,
 				Config: sloggin.Config{
@@ -67,14 +66,28 @@ func main() {
 				},
 			}
 		}),
+		fx.Provide(func(cfg *config.AppConfig) *bootstrap.DBParams {
+			return &bootstrap.DBParams{
+				Type:     cfg.Database.Type,
+				Host:     cfg.Database.Host,
+				Port:     cfg.Database.Port,
+				Database: cfg.Database.Database,
+				User:     cfg.Database.User,
+				Password: cfg.Database.Password,
+			}
+		}),
 
 		// enable inported modules
 		bootstrap.Module,
 
 		// run application
-		fx.Invoke(func(app *bootstrap.Application, svr *http.Server, logger *slog.Logger) {
-			logger.Info("Application started")
+		fx.Invoke(func(app *bootstrap.Application, logger *slog.Logger) {
+			if err := app.RunServer(logger); err != nil {
+				logger.Error("Failed to run server : " + err.Error())
+			} else {
+				logger.Info("Succeeded to run server")
+			}
 		}),
 	)
-	app.Run()
+	svr.Run()
 }
