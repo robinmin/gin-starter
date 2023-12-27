@@ -1,7 +1,9 @@
 package config
 
-const AppName = "dragondoat"
-const AppVersion = "0.0.1"
+const (
+	AppName    = "dragondoat"
+	AppVersion = "0.0.1"
+)
 
 type AppConfig struct {
 	System struct {
