@@ -3,11 +3,14 @@ package main
 import (
 	"flag"
 	"fmt"
-	"os"
+	"log/slog"
+	"net/http"
 	"time"
 
 	"github.com/robinmin/gin-starter/config"
 	"github.com/robinmin/gin-starter/pkg/bootstrap"
+	sloggin "github.com/samber/slog-gin"
+	"go.uber.org/fx"
 )
 
 var (
@@ -24,6 +27,18 @@ func init() {
 }
 
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+func NewAppConfig() *config.AppConfig {
+	if config_file == "" {
+		config_file = "config/app_config.yaml"
+	}
+	cfg, err := bootstrap.LoadConfig[config.AppConfig](config_file)
+	if err != nil {
+		fmt.Println("Failed to load yaml config file: " + err.Error())
+		return nil
+	}
+	return cfg
+}
+
 func main() {
 	// parse command line arguments and show help only if specified
 	flag.Parse()
@@ -32,29 +47,34 @@ func main() {
 		return
 	}
 
-	if config_file == "" {
-		config_file = "config/app_config.yaml"
-	}
-	cfg, err0 := bootstrap.LoadConfig[config.AppConfig](config_file)
-	if err0 != nil {
-		fmt.Println("Failed to load yaml config file: " + err0.Error())
-		os.Exit(1)
-	}
+	app := fx.New(
+		// configurations for logger and config file items
+		fx.Provide(NewAppConfig),
+		fx.Provide(func(cfg *config.AppConfig) *bootstrap.ApplicationConfig {
+			return &bootstrap.ApplicationConfig{
+				TrustedProxies: cfg.System.TrustedProxies,
+				ServerAddr:     cfg.System.ServerAddr,
+				Verbose:        verbose,
+			}
+		}),
+		fx.Provide(func(cfg *config.AppConfig) bootstrap.LoggerParams {
+			return bootstrap.LoggerParams{
+				LogFileName:  fmt.Sprintf("log/gin-starter-%s.log", time.Now().Format("20060102")),
+				DefaultLevel: slog.LevelDebug,
+				Config: sloggin.Config{
+					WithSpanID:  true,
+					WithTraceID: true,
+				},
+			}
+		}),
 
-	appCfg := &bootstrap.ApplicationConfig{
-		LogFileName: fmt.Sprintf("log/gin-starter-%s.log", time.Now().Format("20060102")),
-		Verbose:     verbose,
-	}
-	app, err := bootstrap.NewApplication(appCfg)
-	if err != nil {
-		fmt.Println("Failed to create an application instance on startup: " + err.Error())
-		os.Exit(1)
-	}
-	defer app.Quit()
+		// enable inported modules
+		bootstrap.Module,
 
-	err = app.RunServer(cfg.System.ServerAddr)
-	if err != nil {
-		app.Logger.Error(err.Error())
-		os.Exit(1)
-	}
+		// run application
+		fx.Invoke(func(app *bootstrap.Application, svr *http.Server, logger *slog.Logger) {
+			logger.Info("Application started")
+		}),
+	)
+	app.Run()
 }
