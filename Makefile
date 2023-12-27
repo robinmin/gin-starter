@@ -53,7 +53,8 @@ test: ## Run the tests of the project.
 check: ## Run precke before committing
 	$(info ******************** checking before committing ********************)
 # 	use git commit hook to check before commiting the code into git
-	@.git/hooks/prepare-commit-msg .
+#	@.git/hooks/prepare-commit-msg .
+	pre-commit run --all-files
 
 #	goreleaser --snapshot --skip-publish --clean
 
