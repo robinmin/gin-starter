@@ -3,12 +3,9 @@ package bootstrap
 import (
 	"fmt"
 
-	"github.com/jmoiron/sqlx"
-
 	// _ "gorm.io/driver/sqlite" // // Sqlite driver based on GGO
 	_ "github.com/glebarez/sqlite" // Pure go SQLite driver, checkout https://github.com/glebarez/sqlite for details
-	// "github.com/robinmin/gin-starter/config"
-	// "github.com/robinmin/dragonboat/config"
+	"github.com/jmoiron/sqlx"
 )
 
 type DBParams struct {
