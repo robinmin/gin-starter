@@ -3,10 +3,12 @@ package bootstrap
 import "go.uber.org/fx"
 
 // Module exports dependency
-var Module = fx.Options(fx.Provide(
-	NewLogger,
-	// NewDBParams,
-	NewDB,
-	NewApplication,
-	// NewHttpServer,
-))
+var Module = fx.Module("bootstrap",
+	fx.Provide(
+		NewLogger,
+		// NewDBParams,
+		NewDB,
+		NewApplication,
+		// NewHttpServer,
+	),
+)
