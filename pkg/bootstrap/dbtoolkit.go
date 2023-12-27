@@ -12,6 +12,8 @@ import (
 )
 
 type DBParams struct {
+	// fx.In
+
 	Type     string
 	Host     string
 	Port     int
@@ -20,8 +22,8 @@ type DBParams struct {
 	Password string
 }
 
-func NewDBParams(dbtype string, dbhost string, dbport int, dbdatabase string, dbuser string, dbpassword string) *DBParams {
-	return &DBParams{
+func NewDBParams(dbtype string, dbhost string, dbport int, dbdatabase string, dbuser string, dbpassword string) DBParams {
+	return DBParams{
 		Type:     dbtype,
 		Host:     dbhost,
 		Port:     dbport,
@@ -31,7 +33,7 @@ func NewDBParams(dbtype string, dbhost string, dbport int, dbdatabase string, db
 	}
 }
 
-func (param *DBParams) GetConnectionString() (string, error) {
+func (param DBParams) GetConnectionString() (string, error) {
 	switch param.Type {
 	case "mysql":
 		return fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?parseTime=true", param.User, param.Password, param.Host, param.Port, param.Database), nil
@@ -46,7 +48,7 @@ type DBToolKit struct {
 	*sqlx.DB
 }
 
-func NewDB(param *DBParams) (*DBToolKit, error) {
+func NewDB(param DBParams) (*DBToolKit, error) {
 	conn_str, err := param.GetConnectionString()
 	if err != nil {
 		return nil, fmt.Errorf("unsupported database type: %s", param.Type)
