@@ -71,7 +71,7 @@ func closeLogFile() {
 	}
 }
 
-func NewLogger(params LoggerParams, lc fx.Lifecycle) *slog.Logger {
+func NewLogger(params *LoggerParams, lc fx.Lifecycle) *slog.Logger {
 	opts := &slog.HandlerOptions{
 		Level: params.DefaultLevel,
 	}
@@ -112,11 +112,16 @@ type Application struct {
 	// Engine instance
 	engine *gin.Engine
 
+	// server instance
+	server *http.Server
+
 	// DB instance
 	// DB     *database.DB
+
+	lifeCycle fx.Lifecycle
 }
 
-func NewApplication(logger *slog.Logger, logParam LoggerParams, cfg *ApplicationConfig) *Application {
+func NewApplication(logger *slog.Logger, logParam *LoggerParams, cfg *ApplicationConfig, lc fx.Lifecycle) *Application {
 	app := &Application{
 		Config: cfg,
 	}
@@ -143,29 +148,27 @@ func NewApplication(logger *slog.Logger, logParam LoggerParams, cfg *Application
 		gin.DisableConsoleColor()
 	}
 
+	app.server = NewHttpServer(app, logger)
+	app.lifeCycle = lc
+
 	// default status api
 	app.engine.GET("/status", status.GinHandler)
 
 	return app
 }
 
-type HttpServerParams struct {
-	fx.In
-
-	Lifecycle fx.Lifecycle
-	App       *Application
-}
-
-func NewHttpServer(params HttpServerParams, logger *slog.Logger) *http.Server {
-	srv := &http.Server{
-		Addr:         params.App.Config.ServerAddr,
-		Handler:      params.App.engine,
+func NewHttpServer(app *Application, logger *slog.Logger) *http.Server {
+	return &http.Server{
+		Addr:         app.Config.ServerAddr,
+		Handler:      app.engine,
 		ErrorLog:     slog.NewLogLogger(logger.Handler(), slog.LevelWarn),
 		IdleTimeout:  defaultIdleTimeout,
 		ReadTimeout:  defaultReadTimeout,
 		WriteTimeout: defaultWriteTimeout,
 	}
+}
 
+func (app *Application) RunServer(logger *slog.Logger) error {
 	shutdownErrorChan := make(chan error)
 
 	go func() {
@@ -176,36 +179,36 @@ func NewHttpServer(params HttpServerParams, logger *slog.Logger) *http.Server {
 		ctx, cancel := context.WithTimeout(context.Background(), defaultShutdownPeriod)
 		defer cancel()
 
-		shutdownErrorChan <- srv.Shutdown(ctx)
+		shutdownErrorChan <- app.server.Shutdown(ctx)
 	}()
 
-	params.Lifecycle.Append(fx.Hook{
+	app.lifeCycle.Append(fx.Hook{
 		OnStart: func(context.Context) error {
-			logger.Info("Starting server", slog.Group("server", "addr", srv.Addr))
+			logger.Info("Starting server", slog.Group("server", "addr", app.server.Addr))
 
 			go func() {
-				err := srv.ListenAndServe()
+				err := app.server.ListenAndServe()
 				if err != nil && err != http.ErrServerClosed {
 					shutdownErrorChan <- err
 				}
 			}()
 
-			logger.Info("Succeeded to start HTTP Server at", slog.Group("server", "addr", srv.Addr))
+			logger.Info("Succeeded to start HTTP Server at", slog.Group("server", "addr", app.server.Addr))
 			return nil
 		},
 		OnStop: func(ctx context.Context) error {
-			logger.Info("Stopped server", slog.Group("server", "addr", srv.Addr))
+			logger.Info("Stopped server", slog.Group("server", "addr", app.server.Addr))
 
 			err := <-shutdownErrorChan
 			if err != nil {
 				return err
 			}
 
-			return srv.Shutdown(ctx)
+			return app.server.Shutdown(ctx)
 		},
 	})
 
-	return srv
+	return nil
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -240,14 +243,3 @@ func SaveConfig[T any](cfg *T, yamlFile string) error {
 
 	return nil
 }
-
-// func (cfg *AppConfig) GetConnectionString() (string, error) {
-// 	switch cfg.Database.Type {
-// 	case "mysql":
-// 		return fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?parseTime=true", cfg.Database.User, cfg.Database.Password, cfg.Database.Host, cfg.Database.Port, cfg.Database.Database), nil
-// 	case "sqlite3":
-// 		return fmt.Sprintf("file:%s?cache=shared&mode=rwc", cfg.Database.Database), nil
-// 	default:
-// 		return "", fmt.Errorf("unsupported database type: %s", cfg.Database.Type)
-// 	}
-// }
