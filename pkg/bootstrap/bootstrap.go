@@ -71,7 +71,7 @@ func closeLogFile() {
 	}
 }
 
-func NewLogger(params *LoggerParams, lc fx.Lifecycle) *slog.Logger {
+func NewLogger(params LoggerParams, lc fx.Lifecycle) *slog.Logger {
 	opts := &slog.HandlerOptions{
 		Level: params.DefaultLevel,
 	}
@@ -121,7 +121,7 @@ type Application struct {
 	lifeCycle fx.Lifecycle
 }
 
-func NewApplication(logger *slog.Logger, logParam *LoggerParams, cfg *ApplicationConfig, lc fx.Lifecycle) *Application {
+func NewApplication(logger *slog.Logger, logParam LoggerParams, cfg *ApplicationConfig, lc fx.Lifecycle) *Application {
 	app := &Application{
 		Config: cfg,
 	}
@@ -207,7 +207,6 @@ func (app *Application) RunServer(logger *slog.Logger) error {
 			return app.server.Shutdown(ctx)
 		},
 	})
-
 	return nil
 }
 
