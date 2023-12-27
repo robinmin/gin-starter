@@ -6,18 +6,16 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"os"
 	"os/signal"
 	"strings"
 	"syscall"
 	"time"
 
-	"os"
-
 	status "github.com/appleboy/gin-status-api"
+	"github.com/gin-gonic/gin"
 	sloggin "github.com/samber/slog-gin"
 	"go.uber.org/fx"
-
-	"github.com/gin-gonic/gin"
 	"gopkg.in/yaml.v3"
 )
 
@@ -53,7 +51,7 @@ func createLogWriter(filename string) io.Writer {
 
 	if __logFileHandler == nil {
 		var err error
-		__logFileHandler, err = os.OpenFile(filename, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0666)
+		__logFileHandler, err = os.OpenFile(filename, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o666)
 		if err != nil {
 			fmt.Println("Failed to open log file: %w", err)
 			return nil
@@ -235,7 +233,7 @@ func SaveConfig[T any](cfg *T, yamlFile string) error {
 		return err
 	}
 
-	err = os.WriteFile(yamlFile, data, 0644)
+	err = os.WriteFile(yamlFile, data, 0o644)
 	if err != nil {
 		return err
 	}
