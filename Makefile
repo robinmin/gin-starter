@@ -18,7 +18,7 @@ install: ## Install dependencies.
 	$(GOCMD) install github.com/cosmtrek/air@latest
 	$(GOCMD) install github.com/pressly/goose/v3/cmd/goose@latest
 	$(GOCMD) install github.com/sqlc-dev/sqlc/cmd/sqlc@latest
-	pre-commit install
+	pre-commit install --hook-type commit-msg
 
 .PHONY: start
 start: ## Start dev server.
