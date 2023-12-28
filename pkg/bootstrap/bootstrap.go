@@ -170,12 +170,12 @@ func NewQuickResult(code int, data interface{}) Result {
 
 func GlobalErrorMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		//先执行请求
+		// 先执行请求
 		c.Next()
 
 		// 发生了错误
 		if len(c.Errors) > 0 {
-			//获取最后一个error 返回
+			// 获取最后一个error 返回
 			err := c.Errors.Last()
 			NewResult(http.StatusInternalServerError, err.Error(), nil).Fail(c)
 			return

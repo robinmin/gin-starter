@@ -6,12 +6,11 @@ import (
 	"log/slog"
 	"time"
 
-	sloggin "github.com/samber/slog-gin"
-	"go.uber.org/fx"
-
 	"github.com/robinmin/gin-starter/config"
 	"github.com/robinmin/gin-starter/errors"
 	"github.com/robinmin/gin-starter/pkg/bootstrap"
+	sloggin "github.com/samber/slog-gin"
+	"go.uber.org/fx"
 )
 
 var (

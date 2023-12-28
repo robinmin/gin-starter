@@ -12,9 +12,7 @@ import (
 	"go.uber.org/fx"
 )
 
-var (
-	__logFileHandler *os.File
-)
+var __logFileHandler *os.File
 
 type LoggerParams struct {
 	// fx.In
