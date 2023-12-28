@@ -224,6 +224,29 @@ func (app *Application) RunServer(logger *slog.Logger) error {
 	return nil
 }
 
+func NewQuickResult(code int, data interface{}) Result {
+	return Result{
+		Code:    code,
+		Message: GetMessage(code),
+		Data:    data,
+	}
+}
+
+func GlobalErrorMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		//先执行请求
+		c.Next()
+
+		// 发生了错误
+		if len(c.Errors) > 0 {
+			//获取最后一个error 返回
+			err := c.Errors.Last()
+			NewResult(http.StatusInternalServerError, err.Error(), nil).Fail(c)
+			return
+		}
+	}
+}
+
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // LoadConfig 从指定的YAML文件中加载配置信息
