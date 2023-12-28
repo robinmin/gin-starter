@@ -65,7 +65,7 @@ func NewApplication(logger *AppLogger, cfg *ApplicationConfig, lc fx.Lifecycle) 
 
 	app.engine = gin.New()
 	// The middleware will log all requests attributes.
-	app.engine.Use(sloggin.NewWithConfig(logger.RawLogger, logger.Params.Config), gin.Recovery())
+	app.engine.Use(sloggin.NewWithConfig(logger.Logger, logger.Params.Config), gin.Recovery())
 	app.engine.ForwardedByClientIP = true
 	app.engine.Use(GlobalErrorMiddleware())
 

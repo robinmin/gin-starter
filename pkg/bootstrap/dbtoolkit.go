@@ -46,11 +46,11 @@ type DBToolKit struct {
 }
 
 func NewDB(param DBParams) (*DBToolKit, error) {
-	conn_str, err := param.GetConnectionString()
-	if err != nil {
-		return nil, fmt.Errorf("unsupported database type: %s", param.Type)
+	conn_str, err0 := param.GetConnectionString()
+	if err0 != nil {
+		return nil, fmt.Errorf("Unsupported database type: %s", param.Type)
 	}
 
-	db, err1 := sqlx.Connect(param.Type, conn_str)
-	return &DBToolKit{DB: db}, err1
+	db, err := sqlx.Connect(param.Type, conn_str)
+	return &DBToolKit{DB: db}, err
 }
