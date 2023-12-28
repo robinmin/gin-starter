@@ -35,7 +35,10 @@ type LoggerParams struct {
 	Config       sloggin.Config
 }
 
-var __logFileHandler *os.File
+var (
+	__logFileHandler *os.File
+	__errorInfo      map[int]string
+)
 
 func createLogWriter(filename string) io.Writer {
 	var writers []io.Writer
@@ -128,6 +131,7 @@ func NewApplication(logger *slog.Logger, logParam LoggerParams, cfg *Application
 	// The middleware will log all requests attributes.
 	app.engine.Use(sloggin.NewWithConfig(logger, logParam.Config), gin.Recovery())
 	app.engine.ForwardedByClientIP = true
+	app.engine.Use(GlobalErrorMiddleware())
 
 	var err error
 	if cfg.TrustedProxies == "" {
@@ -163,6 +167,18 @@ func NewHttpServer(app *Application, logger *slog.Logger) *http.Server {
 		IdleTimeout:  defaultIdleTimeout,
 		ReadTimeout:  defaultReadTimeout,
 		WriteTimeout: defaultWriteTimeout,
+	}
+}
+
+func SetErrorInfo(ei map[int]string) {
+	__errorInfo = ei
+}
+
+func GetMessage(code int) string {
+	if msg, ok := __errorInfo[code]; ok {
+		return msg
+	} else {
+		return fmt.Sprintf("Unknown error code: %d", code)
 	}
 }
 

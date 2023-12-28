@@ -6,10 +6,12 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/robinmin/gin-starter/config"
-	"github.com/robinmin/gin-starter/pkg/bootstrap"
 	sloggin "github.com/samber/slog-gin"
 	"go.uber.org/fx"
+
+	"github.com/robinmin/gin-starter/config"
+	"github.com/robinmin/gin-starter/errors"
+	"github.com/robinmin/gin-starter/pkg/bootstrap"
 )
 
 var (
@@ -26,7 +28,7 @@ func init() {
 }
 
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-func NewAppConfig() *config.AppConfig {
+func newAppConfig() *config.AppConfig {
 	if config_file == "" {
 		config_file = "config/app_config.yaml"
 	}
@@ -46,9 +48,12 @@ func main() {
 		return
 	}
 
+	// set error information
+	bootstrap.SetErrorInfo(errors.ErrorCodeMapping)
+
 	svr := fx.New(
 		// configurations for logger and config file items
-		fx.Provide(NewAppConfig),
+		fx.Provide(newAppConfig),
 		fx.Provide(func(cfg *config.AppConfig) *bootstrap.ApplicationConfig {
 			return &bootstrap.ApplicationConfig{
 				TrustedProxies: cfg.System.TrustedProxies,

@@ -54,8 +54,3 @@ func NewDB(param DBParams) (*DBToolKit, error) {
 	db, err1 := sqlx.Connect(param.Type, conn_str)
 	return &DBToolKit{DB: db}, err1
 }
-
-// func NewQuery[T any](db *DBToolKit) *T {
-// 	// return [T]{db: db}
-// 	return new(T)
-// }
