@@ -12,6 +12,7 @@ import (
 	"time"
 
 	status "github.com/appleboy/gin-status-api"
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	sloggin "github.com/samber/slog-gin"
 	"go.uber.org/fx"
@@ -37,6 +38,8 @@ type ApplicationConfig struct {
 
 	// Configuration of server address
 	ServerAddr string
+
+	EnableCORS bool
 
 	// verbose flag
 	Verbose bool
@@ -68,6 +71,15 @@ func NewApplication(logger *AppLogger, cfg *ApplicationConfig, lc fx.Lifecycle) 
 	app.engine.Use(sloggin.NewWithConfig(logger.Logger, logger.Params.Config), gin.Recovery())
 	app.engine.ForwardedByClientIP = true
 	app.engine.Use(GlobalErrorMiddleware())
+
+	if cfg.EnableCORS {
+		app.engine.Use(cors.New(cors.Config{
+			AllowCredentials: true,
+			AllowOriginFunc:  func(origin string) bool { return true },
+			AllowHeaders:     []string{"*"},
+			AllowMethods:     []string{"GET", "POST", "PUT", "HEAD", "OPTIONS"},
+		}))
+	}
 
 	var err error
 	if cfg.TrustedProxies == "" {

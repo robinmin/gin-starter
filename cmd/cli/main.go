@@ -57,6 +57,7 @@ func main() {
 			return &bootstrap.ApplicationConfig{
 				TrustedProxies: cfg.System.TrustedProxies,
 				ServerAddr:     cfg.System.ServerAddr,
+				EnableCORS:     cfg.System.EnableCORS,
 				Verbose:        verbose,
 			}
 		}, func(cfg *config.AppConfig) bootstrap.LoggerParams {
