@@ -3,7 +3,6 @@ package bootstrap
 import (
 	"context"
 	"fmt"
-	"io"
 	"log/slog"
 	"net/http"
 	"os"
@@ -27,72 +26,9 @@ const (
 )
 
 // ////////////////////////////////////////////////////////////////////////////////////////////////////////////
-type LoggerParams struct {
-	// fx.In
-
-	LogFileName  string
-	DefaultLevel slog.Level
-	Config       sloggin.Config
-}
-
 var (
-	__logFileHandler *os.File
-	__errorInfo      map[int]string
+	__errorInfo map[int]string
 )
-
-func createLogWriter(filename string) io.Writer {
-	var writers []io.Writer
-	if gin.IsDebugging() {
-		writers = append(writers, os.Stdout)
-	}
-
-	cwd, err := os.Getwd()
-	if err != nil {
-		panic(err)
-	}
-	fmt.Println("Current working directory: ", cwd)
-
-	if __logFileHandler == nil {
-		var err error
-		__logFileHandler, err = os.OpenFile(filename, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o666)
-		if err != nil {
-			fmt.Println("Failed to open log file: %w", err)
-			return nil
-		}
-	}
-
-	writers = append(writers, __logFileHandler)
-	return io.MultiWriter(writers...)
-}
-
-func closeLogFile() {
-	if __logFileHandler != nil {
-		__logFileHandler.Close()
-		__logFileHandler = nil
-	}
-}
-
-func NewLogger(params LoggerParams, lc fx.Lifecycle) *slog.Logger {
-	opts := &slog.HandlerOptions{
-		Level: params.DefaultLevel,
-	}
-	writer := createLogWriter(params.LogFileName)
-	if writer == nil {
-		gin.DefaultWriter = os.Stdout
-	} else {
-		gin.DefaultWriter = writer
-	}
-	lc.Append(fx.Hook{
-		OnStart: func(ctx context.Context) error {
-			return nil
-		},
-		OnStop: func(ctx context.Context) error {
-			closeLogFile()
-			return nil
-		},
-	})
-	return slog.New(slog.NewTextHandler(gin.DefaultWriter, opts))
-}
 
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 type ApplicationConfig struct {
@@ -122,14 +58,14 @@ type Application struct {
 	lifeCycle fx.Lifecycle
 }
 
-func NewApplication(logger *slog.Logger, logParam LoggerParams, cfg *ApplicationConfig, lc fx.Lifecycle) *Application {
+func NewApplication(logger *AppLogger, cfg *ApplicationConfig, lc fx.Lifecycle) *Application {
 	app := &Application{
 		Config: cfg,
 	}
 
 	app.engine = gin.New()
 	// The middleware will log all requests attributes.
-	app.engine.Use(sloggin.NewWithConfig(logger, logParam.Config), gin.Recovery())
+	app.engine.Use(sloggin.NewWithConfig(logger.Log, logger.Params.Config), gin.Recovery())
 	app.engine.ForwardedByClientIP = true
 	app.engine.Use(GlobalErrorMiddleware())
 
@@ -159,7 +95,7 @@ func NewApplication(logger *slog.Logger, logParam LoggerParams, cfg *Application
 	return app
 }
 
-func NewHttpServer(app *Application, logger *slog.Logger) *http.Server {
+func NewHttpServer(app *Application, logger *AppLogger) *http.Server {
 	return &http.Server{
 		Addr:         app.Config.ServerAddr,
 		Handler:      app.engine,
@@ -182,7 +118,7 @@ func GetMessage(code int) string {
 	}
 }
 
-func (app *Application) RunServer(logger *slog.Logger) error {
+func (app *Application) RunServer(logger *AppLogger) error {
 	shutdownErrorChan := make(chan error)
 
 	go func() {

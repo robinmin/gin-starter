@@ -60,8 +60,7 @@ func main() {
 				ServerAddr:     cfg.System.ServerAddr,
 				Verbose:        verbose,
 			}
-		}),
-		fx.Provide(func(cfg *config.AppConfig) bootstrap.LoggerParams {
+		}, func(cfg *config.AppConfig) bootstrap.LoggerParams {
 			return bootstrap.LoggerParams{
 				LogFileName:  fmt.Sprintf("log/gin-starter-%s.log", time.Now().Format("20060102")),
 				DefaultLevel: slog.LevelDebug,
@@ -70,8 +69,7 @@ func main() {
 					WithTraceID: true,
 				},
 			}
-		}),
-		fx.Provide(func(cfg *config.AppConfig) bootstrap.DBParams {
+		}, func(cfg *config.AppConfig) bootstrap.DBParams {
 			return bootstrap.DBParams{
 				Type:     cfg.Database.Type,
 				Host:     cfg.Database.Host,
@@ -86,7 +84,7 @@ func main() {
 		bootstrap.Module,
 
 		// run application
-		fx.Invoke(func(app *bootstrap.Application, logger *slog.Logger) {
+		fx.Invoke(func(app *bootstrap.Application, logger *bootstrap.AppLogger) {
 			if err := app.RunServer(logger); err != nil {
 				logger.Error("Failed to run server : " + err.Error())
 			} else {
