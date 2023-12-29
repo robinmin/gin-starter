@@ -1,16 +1,25 @@
-system:
-  debug_mode: false
-  server_address: :7086
-  enable_cors: true
-  enable_auth: true
-  external_svr_address: http://localhost:7086/
-  trusted_proxies: 127.0.0.1;10.0.0.0/8
-database:
-  # dbtype: mysql
-  # dbhost: 127.0.0.1
-  # dbname: temp
-  # dbport: 3306
-  # dbuser: user
-  # dbpassword: password
-  dbtype: sqlite3
-  dbname: log/app.db
+basic:
+  system:
+    debug_mode: false
+    server_address: :7086
+    enable_cors: true
+    enable_auth: true
+    external_svr_address: http://localhost:7086/
+    trusted_proxies: 127.0.0.1;10.0.0.0/8
+  log:
+    log_file_name: log/gin-starter-%s.log
+    log_file_name_format: 20060102
+    default_level: -4
+  database:
+    # dbtype: mysql
+    # dbhost: 127.0.0.1
+    # dbname: temp
+    # dbport: 3306
+    # dbuser: user
+    # dbpassword: password
+    dbtype: sqlite3
+    dbname: log/app.db
+  sentry:
+    sentry_dsn:
+    traces_sample_rate: 1.0
+    default_level: -4

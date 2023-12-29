@@ -14,6 +14,9 @@ import (
 	status "github.com/appleboy/gin-status-api"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+	"github.com/robinmin/gin-starter/pkg/bootstrap/types"
+
+	"github.com/creasty/defaults"
 	sloggin "github.com/samber/slog-gin"
 	"go.uber.org/fx"
 	"gopkg.in/yaml.v3"
@@ -32,22 +35,9 @@ var (
 )
 
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-type ApplicationConfig struct {
-	// Configuration of server trusted proxies
-	TrustedProxies string
-
-	// Configuration of server address
-	ServerAddr string
-
-	EnableCORS bool
-
-	// verbose flag
-	Verbose bool
-}
-
 type Application struct {
 	// Configuration
-	Config *ApplicationConfig
+	Config types.AppSysConfig
 
 	// Engine instance
 	engine *gin.Engine
@@ -61,9 +51,9 @@ type Application struct {
 	lifeCycle fx.Lifecycle
 }
 
-func NewApplication(logger *AppLogger, cfg *ApplicationConfig, lc fx.Lifecycle) *Application {
+func NewApplication(cfg types.AppConfig, lc fx.Lifecycle, sty *AppSentry, logger *AppLogger) *Application {
 	app := &Application{
-		Config: cfg,
+		Config: cfg.System,
 	}
 
 	app.engine = gin.New()
@@ -72,7 +62,7 @@ func NewApplication(logger *AppLogger, cfg *ApplicationConfig, lc fx.Lifecycle) 
 	app.engine.ForwardedByClientIP = true
 	app.engine.Use(GlobalErrorMiddleware())
 
-	if cfg.EnableCORS {
+	if cfg.System.EnableCORS {
 		app.engine.Use(cors.New(cors.Config{
 			AllowCredentials: true,
 			AllowOriginFunc:  func(origin string) bool { return true },
@@ -82,10 +72,10 @@ func NewApplication(logger *AppLogger, cfg *ApplicationConfig, lc fx.Lifecycle) 
 	}
 
 	var err error
-	if cfg.TrustedProxies == "" {
+	if cfg.System.TrustedProxies == "" {
 		err = app.engine.SetTrustedProxies([]string{"127.0.0.1"})
 	} else {
-		err = app.engine.SetTrustedProxies(strings.Split(cfg.TrustedProxies, ";"))
+		err = app.engine.SetTrustedProxies(strings.Split(cfg.System.TrustedProxies, ";"))
 	}
 	if err != nil {
 		logger.Warn("Failed to set trusted proxies")
@@ -196,6 +186,15 @@ func GlobalErrorMiddleware() gin.HandlerFunc {
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// create instance and load default values which defined in the struct definition
+func NewInstance[T any]() *T {
+	obj := new(T)
+	if err := defaults.Set(obj); err != nil {
+		return nil
+	}
+	return obj
+}
 
 // LoadConfig 从指定的YAML文件中加载配置信息
 func LoadConfig[T any](yamlFile string) (*T, error) {

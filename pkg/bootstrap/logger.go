@@ -8,28 +8,21 @@ import (
 	"os"
 
 	"github.com/gin-gonic/gin"
-	sloggin "github.com/samber/slog-gin"
+	"github.com/robinmin/gin-starter/pkg/bootstrap/types"
 	"go.uber.org/fx"
 )
 
-var __logFileHandler *os.File
-
-type LoggerParams struct {
-	// fx.In
-
-	LogFileName  string
-	DefaultLevel slog.Level
-	Config       sloggin.Config
-}
+type LoggerParams types.AppLogConfig
 
 type AppLogger struct {
-	// fx.In
-	*slog.Logger
+	*slog.Logger // Logger instance
 
-	Params LoggerParams
+	Params LoggerParams // Parameters for the logger
 }
 
-func createLogWriter(filename string) io.Writer {
+// var __logFileHandler *os.File
+
+func (lp *LoggerParams) CreateLogWriter(filename string) io.Writer {
 	var writers []io.Writer
 	if gin.IsDebugging() {
 		writers = append(writers, os.Stdout)
@@ -41,31 +34,32 @@ func createLogWriter(filename string) io.Writer {
 	}
 	fmt.Println("Current working directory: ", cwd)
 
-	if __logFileHandler == nil {
+	if lp.LogFileHandler == nil {
 		var err error
-		__logFileHandler, err = os.OpenFile(filename, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o666)
+		lp.LogFileHandler, err = os.OpenFile(filename, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o666)
 		if err != nil {
 			fmt.Println("Failed to open log file: %w", err)
 			return nil
 		}
 	}
 
-	writers = append(writers, __logFileHandler)
+	writers = append(writers, lp.LogFileHandler)
 	return io.MultiWriter(writers...)
 }
 
-func closeLogFile() {
-	if __logFileHandler != nil {
-		__logFileHandler.Close()
-		__logFileHandler = nil
+func (lp *LoggerParams) CloseLogFile() {
+	if lp.LogFileHandler != nil {
+		lp.LogFileHandler.Close()
+		lp.LogFileHandler = nil
 	}
 }
 
-func NewLogger(params LoggerParams, lc fx.Lifecycle) *AppLogger {
+func NewLogger(cfg types.AppConfig, lc fx.Lifecycle) *AppLogger {
+	params := LoggerParams(cfg.Log)
 	opts := &slog.HandlerOptions{
-		Level: params.DefaultLevel,
+		Level: slog.Level(params.DefaultLevel),
 	}
-	writer := createLogWriter(params.LogFileName)
+	writer := params.CreateLogWriter(params.LogFileName)
 	if writer == nil {
 		gin.DefaultWriter = os.Stdout
 	} else {
@@ -76,10 +70,11 @@ func NewLogger(params LoggerParams, lc fx.Lifecycle) *AppLogger {
 			return nil
 		},
 		OnStop: func(ctx context.Context) error {
-			closeLogFile()
+			params.CloseLogFile()
 			return nil
 		},
 	})
+
 	return &AppLogger{
 		Logger: slog.New(slog.NewTextHandler(gin.DefaultWriter, opts)),
 		Params: params,

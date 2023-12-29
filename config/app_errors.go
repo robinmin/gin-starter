@@ -1,4 +1,4 @@
-package errors
+package config
 
 const (
 	// 定义可预见的异常

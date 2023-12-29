@@ -4,6 +4,7 @@ go 1.21.4
 
 require (
 	github.com/appleboy/gin-status-api v1.1.0
+	github.com/creasty/defaults v1.7.0
 	github.com/daixiang0/gci v0.12.1
 	github.com/getsentry/sentry-go v0.25.0
 	github.com/gin-contrib/cors v1.5.0

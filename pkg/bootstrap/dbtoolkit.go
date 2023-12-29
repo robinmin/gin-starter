@@ -6,18 +6,11 @@ import (
 	// _ "gorm.io/driver/sqlite" // // Sqlite driver based on GGO
 	_ "github.com/glebarez/sqlite" // Pure go SQLite driver, checkout https://github.com/glebarez/sqlite for details
 	"github.com/jmoiron/sqlx"
+	"github.com/robinmin/gin-starter/pkg/bootstrap/types"
 )
 
-type DBParams struct {
-	// fx.In
-
-	Type     string
-	Host     string
-	Port     int
-	Database string
-	User     string
-	Password string
-}
+type DBParams types.AppDBConfig
+type DBToolKit sqlx.DB
 
 func NewDBParams(dbtype string, dbhost string, dbport int, dbdatabase string, dbuser string, dbpassword string) DBParams {
 	return DBParams{
@@ -41,16 +34,13 @@ func (param DBParams) GetConnectionString() (string, error) {
 	}
 }
 
-type DBToolKit struct {
-	*sqlx.DB
-}
-
-func NewDB(param DBParams) (*DBToolKit, error) {
-	conn_str, err0 := param.GetConnectionString()
+func NewDB(cfg types.AppConfig) (*DBToolKit, error) {
+	params := DBParams(cfg.Database)
+	conn_str, err0 := params.GetConnectionString()
 	if err0 != nil {
-		return nil, fmt.Errorf("Unsupported database type: %s", param.Type)
+		return nil, fmt.Errorf("Unsupported database type: %s", params.Type)
 	}
 
-	db, err := sqlx.Connect(param.Type, conn_str)
-	return &DBToolKit{DB: db}, err
+	db, err := sqlx.Connect(params.Type, conn_str)
+	return (*DBToolKit)(db), err
 }
