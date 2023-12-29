@@ -4,11 +4,14 @@ go 1.21.4
 
 require (
 	github.com/appleboy/gin-status-api v1.1.0
+	github.com/creasty/defaults v1.7.0
 	github.com/daixiang0/gci v0.12.1
+	github.com/getsentry/sentry-go v0.25.0
 	github.com/gin-contrib/cors v1.5.0
 	github.com/gin-gonic/gin v1.9.1
 	github.com/glebarez/sqlite v1.10.0
 	github.com/golangci/golangci-lint v1.55.2
+	github.com/google/uuid v1.3.1
 	github.com/jmoiron/sqlx v1.3.5
 	github.com/samber/slog-gin v1.7.0
 	go.uber.org/fx v1.20.1
@@ -93,7 +96,6 @@ require (
 	github.com/golangci/revgrep v0.5.2 // indirect
 	github.com/golangci/unconvert v0.0.0-20180507085042-28b1c447d1f4 // indirect
 	github.com/google/go-cmp v0.6.0 // indirect
-	github.com/google/uuid v1.3.1 // indirect
 	github.com/gordonklaus/ineffassign v0.0.0-20230610083614-0e73809eb601 // indirect
 	github.com/gostaticanalysis/analysisutil v0.7.1 // indirect
 	github.com/gostaticanalysis/comment v1.4.2 // indirect
