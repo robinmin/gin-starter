@@ -8,6 +8,7 @@ require (
 	github.com/daixiang0/gci v0.12.1
 	github.com/getsentry/sentry-go v0.25.0
 	github.com/gin-contrib/cors v1.5.0
+	github.com/gin-contrib/static v0.0.1
 	github.com/gin-gonic/gin v1.9.1
 	github.com/glebarez/sqlite v1.10.0
 	github.com/golangci/golangci-lint v1.55.2
