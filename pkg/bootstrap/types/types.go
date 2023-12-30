@@ -27,6 +27,8 @@ type AppSysConfig struct {
 	EnableAuth         bool   `yaml:"enable_auth,omitempty" json:"enable_auth,omitempty" default:"true"`
 	ExternalSvrAddress string `yaml:"external_svr_address,omitempty" json:"external_svr_address,omitempty" default:""`
 	TrustedProxies     string `yaml:"trusted_proxies,omitempty" json:"trusted_proxies,omitempty" default:"127.0.0.1;10.0.0.0/8"`
+	StaticDir          string `yaml:"static_dir,omitempty" json:"static_dir,omitempty" default:"./static"`
+	StaticURL          string `yaml:"static_url,omitempty" json:"static_url,omitempty" default:"/static"`
 }
 
 type AppLogConfig struct {

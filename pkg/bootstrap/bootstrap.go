@@ -13,6 +13,7 @@ import (
 
 	status "github.com/appleboy/gin-status-api"
 	"github.com/gin-contrib/cors"
+	"github.com/gin-contrib/static"
 	"github.com/gin-gonic/gin"
 	"github.com/robinmin/gin-starter/pkg/bootstrap/types"
 
@@ -90,6 +91,14 @@ func NewApplication(cfg types.AppConfig, lc fx.Lifecycle, sty *AppSentry, logger
 
 	app.server = NewHttpServer(app, logger)
 	app.lifeCycle = lc
+
+	// static files
+	if len(cfg.System.StaticDir) > 0 && len(cfg.System.StaticURL) > 0 {
+		app.engine.Use(static.Serve(cfg.System.StaticURL, static.LocalFile(cfg.System.StaticDir, true)))
+
+	}
+
+	app.engine.Use(static.Serve("/", static.LocalFile("/tmp", false)))
 
 	// default status api
 	app.engine.GET("/status", status.GinHandler)

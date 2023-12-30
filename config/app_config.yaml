@@ -6,6 +6,8 @@ basic:
     enable_auth: true
     external_svr_address: http://localhost:7086/
     trusted_proxies: 127.0.0.1;10.0.0.0/8
+    static_dir: ./static
+    static_url: /static
   log:
     log_file_name: log/gin-starter-%s.log
     log_file_name_format: 20060102
