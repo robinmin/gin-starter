@@ -3,6 +3,7 @@ package types
 import (
 	"log/slog"
 	"os"
+	"time"
 
 	sloggin "github.com/samber/slog-gin"
 )
@@ -49,6 +50,20 @@ type AppDBConfig struct {
 	Password string `yaml:"dbpassword,omitempty" json:"dbpassword,omitempty" default:""`
 }
 
+// Definitions for redis configuration
+type AppRedisConfig struct {
+	Size               int           `yaml:"size,omitempty" json:"size,omitempty" default:"10"`                                   // maximum number of idle connections.
+	Network            string        `yaml:"network,omitempty" json:"network,omitempty" default:"tcp"`                            // tcp or udp
+	Address            string        `yaml:"address,omitempty" json:"address,omitempty" default:"localhost:6379"`                 // host:port of redis server
+	Password           string        `yaml:"password,omitempty" json:"password,omitempty" default:""`                             // redis-password
+	DB                 string        `yaml:"db,omitempty" json:"db,omitempty" default:"0"`                                        // database
+	KeyPairs           string        `yaml:"key_pairs,omitempty" json:"key_pairs,omitempty" default:""`                           // Keys are defined in pairs to allow key rotation, but the common case is to set a single authentication key and optionally an encryption key.
+	DefaultExpiration  time.Duration `yaml:"default_expiration,omitempty" json:"default_expiration,omitempty" default:"10m"`      // default expiration time for redis cache
+	EnableRedisCache   bool          `yaml:"enable_redis_cache,omitempty" json:"enable_redis_cache,omitempty" default:"true"`     // use redis cache
+	EnableRedisSession bool          `yaml:"enable_redis_session,omitempty" json:"enable_redis_session,omitempty" default:"true"` // use redis session
+	SessionName        string        `yaml:"session_name,omitempty" json:"session_name,omitempty" default:"session"`              // session name
+}
+
 // Definitions for sentry configuration
 type AppSentryConfig struct {
 	DSN              string              `yaml:"sentry_dsn,omitempty" json:"sentry_dsn,omitempty" default:""`                    // DSN of the sentry
@@ -61,5 +76,6 @@ type AppConfig struct {
 	System   AppSysConfig    `yaml:"system,omitempty" json:"system,omitempty"`
 	Log      AppLogConfig    `yaml:"log,omitempty" json:"log,omitempty"`
 	Database AppDBConfig     `yaml:"database,omitempty" json:"database,omitempty"`
+	Redis    AppRedisConfig  `yaml:"redis,omitempty" json:"redis,omitempty"`
 	Sentry   AppSentryConfig `yaml:"sentry,omitempty" json:"sentry,omitempty"`
 }

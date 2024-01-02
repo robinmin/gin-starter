@@ -7,20 +7,26 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strings"
 	"syscall"
 	"time"
 
 	status "github.com/appleboy/gin-status-api"
+	"github.com/gin-contrib/cache/persistence"
 	"github.com/gin-contrib/cors"
+	"github.com/gin-contrib/sessions"
+	"github.com/gin-contrib/sessions/cookie"
+	"github.com/gin-contrib/sessions/redis"
 	"github.com/gin-contrib/static"
 	"github.com/gin-gonic/gin"
-	"github.com/robinmin/gin-starter/pkg/bootstrap/types"
 
 	"github.com/creasty/defaults"
 	sloggin "github.com/samber/slog-gin"
 	"go.uber.org/fx"
 	"gopkg.in/yaml.v3"
+
+	"github.com/robinmin/gin-starter/pkg/bootstrap/types"
 )
 
 const (
@@ -52,7 +58,12 @@ type Application struct {
 	lifeCycle fx.Lifecycle
 }
 
-func NewApplication(cfg types.AppConfig, lc fx.Lifecycle, sty *AppSentry, logger *AppLogger) *Application {
+func NewApplication(
+	cfg types.AppConfig,
+	lc fx.Lifecycle,
+	sty *AppSentry,
+	logger *AppLogger,
+) *Application {
 	app := &Application{
 		Config: cfg.System,
 	}
@@ -63,6 +74,16 @@ func NewApplication(cfg types.AppConfig, lc fx.Lifecycle, sty *AppSentry, logger
 	app.engine.ForwardedByClientIP = true
 	app.engine.Use(GlobalErrorMiddleware())
 
+	if gin.IsDebugging() {
+		gin.ForceConsoleColor()
+	} else {
+		// 禁用控制台颜色，将日志写入文件时不需要控制台颜色。
+		gin.DisableConsoleColor()
+	}
+
+	app.server = NewHttpServer(app, logger)
+	app.lifeCycle = lc
+
 	if cfg.System.EnableCORS {
 		app.engine.Use(cors.New(cors.Config{
 			AllowCredentials: true,
@@ -70,6 +91,19 @@ func NewApplication(cfg types.AppConfig, lc fx.Lifecycle, sty *AppSentry, logger
 			AllowHeaders:     []string{"*"},
 			AllowMethods:     []string{"GET", "POST", "PUT", "HEAD", "OPTIONS"},
 		}))
+	}
+
+	if cfg.Redis.EnableRedisSession {
+		rstore, _ := redis.NewStoreWithDB(
+			cfg.Redis.Size,
+			cfg.Redis.Network,
+			cfg.Redis.Address,
+			cfg.Redis.Password,
+			cfg.Redis.DB,
+			[]byte(cfg.Redis.KeyPairs))
+		app.engine.Use(sessions.Sessions(cfg.Redis.SessionName, rstore))
+	} else {
+		app.engine.Use(sessions.Sessions(cfg.Redis.SessionName, cookie.NewStore([]byte(cfg.Redis.KeyPairs))))
 	}
 
 	var err error
@@ -82,28 +116,34 @@ func NewApplication(cfg types.AppConfig, lc fx.Lifecycle, sty *AppSentry, logger
 		logger.Warn("Failed to set trusted proxies")
 	}
 
-	if gin.IsDebugging() {
-		gin.ForceConsoleColor()
-	} else {
-		// 禁用控制台颜色，将日志写入文件时不需要控制台颜色。
-		gin.DisableConsoleColor()
-	}
-
-	app.server = NewHttpServer(app, logger)
-	app.lifeCycle = lc
-
 	// static files
 	if len(cfg.System.StaticDir) > 0 && len(cfg.System.StaticURL) > 0 {
-		app.engine.Use(static.Serve(cfg.System.StaticURL, static.LocalFile(cfg.System.StaticDir, true)))
-
+		if absPath, err := filepath.Abs(cfg.System.StaticDir); err == nil {
+			logger.Debug("URL " + cfg.System.StaticURL + " -> " + absPath)
+			app.engine.Use(static.Serve(cfg.System.StaticURL, static.LocalFile(cfg.System.StaticDir, true)))
+		} else {
+			logger.Error("Failed to get absolute path of " + cfg.System.StaticDir)
+		}
 	}
-
-	app.engine.Use(static.Serve("/", static.LocalFile("/tmp", false)))
 
 	// default status api
 	app.engine.GET("/status", status.GinHandler)
 
 	return app
+}
+
+func NewRedisCache(cfg types.AppConfig) *persistence.RedisStore {
+	if cfg.Redis.EnableRedisCache {
+		return persistence.NewRedisCache(cfg.Redis.Address, cfg.Redis.Password, cfg.Redis.DefaultExpiration)
+	}
+	return nil
+}
+
+func NewMemoryCache(cfg types.AppConfig) *persistence.InMemoryStore {
+	if cfg.Redis.EnableRedisCache {
+		return persistence.NewInMemoryStore(cfg.Redis.DefaultExpiration)
+	}
+	return nil
 }
 
 func NewHttpServer(app *Application, logger *AppLogger) *http.Server {

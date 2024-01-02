@@ -49,7 +49,7 @@ func main() {
 	// set error information
 	bootstrap.SetErrorInfo(config.ErrorCodeMapping)
 
-	svr := fx.New(
+	fx.New(
 		// configurations for logger and config file items
 		fx.Provide(newMyAppConfig),
 		fx.Provide(func(cfg *config.MyAppConfig) types.AppConfig {
@@ -73,6 +73,5 @@ func main() {
 				logger.Info("Succeeded to run server")
 			}
 		}),
-	)
-	svr.Run()
+	).Run()
 }

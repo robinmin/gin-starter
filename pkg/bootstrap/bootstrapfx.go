@@ -10,6 +10,8 @@ var Module = fx.Module("bootstrap",
 		NewDB,
 		NewSentry,
 		NewApplication,
+		NewRedisCache,
+		NewMemoryCache,
 		// NewHttpServer,
 	),
 )
