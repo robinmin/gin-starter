@@ -16,6 +16,7 @@ require (
 	github.com/golangci/golangci-lint v1.55.2
 	github.com/google/uuid v1.3.1
 	github.com/jmoiron/sqlx v1.3.5
+	github.com/rs/xid v1.5.0
 	github.com/samber/slog-gin v1.7.0
 	go.uber.org/fx v1.20.1
 	gopkg.in/yaml.v3 v3.0.1

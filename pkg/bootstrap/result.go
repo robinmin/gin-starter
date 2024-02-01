@@ -1,10 +1,29 @@
 package bootstrap
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 )
+
+var (
+	__errorInfo map[int]string
+)
+
+func SetErrorInfo(ei map[int]string) {
+	__errorInfo = ei
+}
+
+func GetMessage(code int) string {
+	if msg, ok := __errorInfo[code]; ok {
+		return msg
+	} else {
+		return fmt.Sprintf("Unknown error code: %d", code)
+	}
+}
+
+// /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Result 表示统一响应的JSON格式
 type Result struct {
@@ -21,6 +40,14 @@ func NewResult(code int, message string, data interface{}) Result {
 	}
 }
 
+func NewQuickResult(code int, data interface{}) Result {
+	return Result{
+		Code:    code,
+		Message: GetMessage(code),
+		Data:    data,
+	}
+}
+
 // 接口执行正常 需要返回数据 data
 func (result Result) OK(c *gin.Context) {
 	c.JSON(http.StatusOK, result)
@@ -29,4 +56,21 @@ func (result Result) OK(c *gin.Context) {
 func (result Result) Fail(c *gin.Context) {
 	c.JSON(http.StatusInternalServerError, result)
 	c.Abort()
+}
+
+// /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+func GlobalErrorHandler() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// 先执行请求
+		c.Next()
+
+		// 发生了错误
+		if len(c.Errors) > 0 {
+			// 获取最后一个error 返回
+			err := c.Errors.Last()
+			NewResult(http.StatusInternalServerError, err.Error(), nil).Fail(c)
+			return
+		}
+	}
 }

@@ -3,7 +3,7 @@
 A simple starter to create Gin based applications.
 
 #### Features
-- log/slog : new standard logging mechanism
+- log/slog : new standard logging mechanism for golang
 - enable sqlc for db schema and migration management mechanism
 
 #### To do list

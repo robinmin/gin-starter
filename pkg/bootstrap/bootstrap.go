@@ -2,7 +2,6 @@ package bootstrap
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
@@ -36,11 +35,6 @@ const (
 	defaultShutdownPeriod = 30 * time.Second
 )
 
-// ////////////////////////////////////////////////////////////////////////////////////////////////////////////
-var (
-	__errorInfo map[int]string
-)
-
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 type Application struct {
 	// Configuration
@@ -69,21 +63,45 @@ func NewApplication(
 	}
 
 	app.engine = gin.New()
-	// The middleware will log all requests attributes.
-	app.engine.Use(sloggin.NewWithConfig(logger.Logger, logger.Params.Config), gin.Recovery())
-	app.engine.ForwardedByClientIP = true
-	app.engine.Use(GlobalErrorMiddleware())
-
 	if gin.IsDebugging() {
 		gin.ForceConsoleColor()
 	} else {
 		// 禁用控制台颜色，将日志写入文件时不需要控制台颜色。
 		gin.DisableConsoleColor()
 	}
+	app.engine.ForwardedByClientIP = true
+
+	var err error
+	if cfg.System.TrustedProxies == "" {
+		err = app.engine.SetTrustedProxies([]string{"127.0.0.1"})
+	} else {
+		err = app.engine.SetTrustedProxies(strings.Split(cfg.System.TrustedProxies, ";"))
+	}
+	if err != nil {
+		logger.Warn("Failed to set trusted proxies")
+	}
+
+	// The middleware functions are executed in the order they are defined.
+	if err = app.useMiddlewares(context.Background(), cfg, logger); err != nil {
+		logger.Error("Failed to enable all middlewares: " + err.Error())
+	}
 
 	app.server = NewHttpServer(app, logger)
 	app.lifeCycle = lc
 
+	// default status api
+	app.engine.GET("/status", status.GinHandler)
+
+	return app
+}
+
+func (app *Application) useMiddlewares(ctx context.Context, cfg types.AppConfig, logger *AppLogger) error {
+	// Middleware for logging
+	app.engine.Use(sloggin.NewWithConfig(logger.Logger, logger.Params.Config), gin.Recovery())
+
+	app.engine.Use(GlobalErrorHandler())
+
+	// Middleware for CORS
 	if cfg.System.EnableCORS {
 		app.engine.Use(cors.New(cors.Config{
 			AllowCredentials: true,
@@ -93,6 +111,7 @@ func NewApplication(
 		}))
 	}
 
+	// Middleware for session
 	if cfg.Redis.EnableRedisSession {
 		rstore, _ := redis.NewStoreWithDB(
 			cfg.Redis.Size,
@@ -106,30 +125,18 @@ func NewApplication(
 		app.engine.Use(sessions.Sessions(cfg.Redis.SessionName, cookie.NewStore([]byte(cfg.Redis.KeyPairs))))
 	}
 
-	var err error
-	if cfg.System.TrustedProxies == "" {
-		err = app.engine.SetTrustedProxies([]string{"127.0.0.1"})
-	} else {
-		err = app.engine.SetTrustedProxies(strings.Split(cfg.System.TrustedProxies, ";"))
-	}
-	if err != nil {
-		logger.Warn("Failed to set trusted proxies")
-	}
-
-	// static files
+	// Middleware for static files
 	if len(cfg.System.StaticDir) > 0 && len(cfg.System.StaticURL) > 0 {
 		if absPath, err := filepath.Abs(cfg.System.StaticDir); err == nil {
 			logger.Debug("URL " + cfg.System.StaticURL + " -> " + absPath)
 			app.engine.Use(static.Serve(cfg.System.StaticURL, static.LocalFile(cfg.System.StaticDir, true)))
 		} else {
 			logger.Error("Failed to get absolute path of " + cfg.System.StaticDir)
+			return err
 		}
 	}
 
-	// default status api
-	app.engine.GET("/status", status.GinHandler)
-
-	return app
+	return nil
 }
 
 func NewRedisCache(cfg types.AppConfig) *persistence.RedisStore {
@@ -154,18 +161,6 @@ func NewHttpServer(app *Application, logger *AppLogger) *http.Server {
 		IdleTimeout:  defaultIdleTimeout,
 		ReadTimeout:  defaultReadTimeout,
 		WriteTimeout: defaultWriteTimeout,
-	}
-}
-
-func SetErrorInfo(ei map[int]string) {
-	__errorInfo = ei
-}
-
-func GetMessage(code int) string {
-	if msg, ok := __errorInfo[code]; ok {
-		return msg
-	} else {
-		return fmt.Sprintf("Unknown error code: %d", code)
 	}
 }
 
@@ -209,29 +204,6 @@ func (app *Application) RunServer(logger *AppLogger) error {
 		},
 	})
 	return nil
-}
-
-func NewQuickResult(code int, data interface{}) Result {
-	return Result{
-		Code:    code,
-		Message: GetMessage(code),
-		Data:    data,
-	}
-}
-
-func GlobalErrorMiddleware() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		// 先执行请求
-		c.Next()
-
-		// 发生了错误
-		if len(c.Errors) > 0 {
-			// 获取最后一个error 返回
-			err := c.Errors.Last()
-			NewResult(http.StatusInternalServerError, err.Error(), nil).Fail(c)
-			return
-		}
-	}
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
