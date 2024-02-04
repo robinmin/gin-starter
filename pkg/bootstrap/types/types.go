@@ -104,7 +104,7 @@ type AppConfig struct {
 
 			// MaxAge indicates how long (with second-precision) the results of a preflight request
 			// can be cached
-			MaxAge time.Duration `yaml:"max_age,omitempty" json:"max_age,omitempty"` // default as 12 * time.Hour
+			MaxAge time.Duration `yaml:"max_age,omitempty" json:"max_age,omitempty" default:"43200"` // in second, default as 12 * time.Hour
 
 			// Allows to add origins like http://some-domain/*, https://api.* or http://some.*.subdomain.com
 			AllowWildcard bool `yaml:"allow_wildcard,omitempty" json:"allow_wildcard,omitempty" default:"false"`
