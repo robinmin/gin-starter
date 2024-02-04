@@ -2,16 +2,41 @@ basic:
   system:
     debug_mode: false
     server_address: :7086
-    enable_cors: true
     enable_auth: true
     external_svr_address: http://localhost:7086/
     trusted_proxies: 127.0.0.1;10.0.0.0/8
     static_dir: ./static
     static_url: /static
-  log:
-    log_file_name: log/gin-starter-%s.log
-    log_file_name_format: 20060102
-    default_level: -4
+  middlewares:
+    log:
+      time_format : 2006-01-02T15:04:05Z07:00
+      utc : false
+      skip_paths:
+      default_level : 0
+    cors:
+      enable: true
+      allow_methods:
+        - POST
+        - PUT
+        - PATCH
+        - DELETE
+        - HEAD
+        - OPTIONS
+      allow_headers:
+        - Origin
+        - Content-Length
+        - Content-Type
+      allow_credentials: false
+      # max_age: 43200000000000
+    session:
+      enable: true
+      name: x-ssession
+      use_redis: true
+    static:
+      enable: true
+      static_dir: ./static
+      static_url: /static
+      indexes: true
   database:
     # dbtype: mysql
     # dbhost: 127.0.0.1
@@ -30,8 +55,6 @@ basic:
     key_pairs:
     default_expiration: 10m
     enable_redis_cache: true
-    enable_redis_session: true
-    session_name: ssession
   sentry:
     sentry_dsn:
     traces_sample_rate: 1.0
