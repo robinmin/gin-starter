@@ -159,6 +159,7 @@ func (app *Application) useMiddlewares(ctx context.Context, cfg types.AppConfig,
 		}
 	}
 
+	// Middleware for gzip
 	if cfg.Middlewares.Gzip.Enable {
 		app.engine.Use(gzip.Gzip(gzip.DefaultCompression))
 	}
