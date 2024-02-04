@@ -3,7 +3,8 @@
 A simple starter to create Gin based applications.
 
 #### Features
-- log/slog : new standard logging mechanism for golang
+- uber/fx for dependency injection
+- uber/zap : replace log/slog with uber/zap as uber/fx already used its.
 - enable sqlc for db schema and migration management mechanism
 
 #### To do list
