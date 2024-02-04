@@ -2,13 +2,13 @@ package bootstrap
 
 import (
 	"context"
-	"log/slog"
 	"net/http"
 	"time"
 
 	"github.com/getsentry/sentry-go"
 	"github.com/google/uuid"
 	"go.uber.org/fx"
+	"go.uber.org/zap/zapcore"
 
 	"github.com/robinmin/gin-starter/pkg/bootstrap/types"
 )
@@ -28,7 +28,7 @@ func NewSentry(cfg types.AppConfig, lc fx.Lifecycle, logger *AppLogger) (*AppSen
 				TracesSampleRate: cfg.Sentry.TracesSampleRate,
 			})
 			if err != nil {
-				logger.Error("Sentry init error", err)
+				logger.Error("Sentry init error : " + err.Error())
 				return err
 			}
 
@@ -89,7 +89,7 @@ func (sty *AppSentry) ReportEvent(event_id types.UserDefinedEvent, eventMessage 
 	needReport, meta := sty.getEventConfig(event_id)
 	if needReport {
 		event := sentry.NewEvent()
-		event.Level = sentry.Level(meta.Level.String())
+		event.Level = sentry.Level(meta.Level)
 		event.Message = eventMessage
 		event.Tags = map[string]string{
 			"event_name": meta.Name,
@@ -111,12 +111,13 @@ func (sty *AppSentry) getEventConfig(event_id types.UserDefinedEvent) (bool, *ty
 		// by default report all
 		meta = types.UserDefinedEventMeta{
 			Name:  "evnt_unknown_report",
-			Level: slog.LevelDebug,
+			Level: "debug",
 			Group: "sys",
 		}
 	}
 
-	if int(meta.Level) >= sty.Params.DefaultLevel {
+	level, err := zapcore.ParseLevel(meta.Level)
+	if err == nil && int(level) >= sty.Params.DefaultLevel {
 		needReport = true
 	} else {
 		needReport = false

@@ -1,8 +1,6 @@
 package config
 
 import (
-	"log/slog"
-
 	"github.com/robinmin/gin-starter/pkg/bootstrap/types"
 )
 
@@ -13,6 +11,6 @@ const (
 )
 
 var SentryEventsMeta = types.UserDefinedEventMap{
-	EVT_CLIENT_INIT:  {Name: "evt_client_init", Level: slog.LevelInfo, Group: "sys"},
-	EVT_CLIENT_CLOSE: {Name: "evt_client_close", Level: slog.LevelInfo, Group: "sys"},
+	EVT_CLIENT_INIT:  types.UserDefinedEventMeta{Name: "evt_client_init", Level: "info", Group: "sys"},
+	EVT_CLIENT_CLOSE: types.UserDefinedEventMeta{Name: "evt_client_close", Level: "info", Group: "sys"},
 }

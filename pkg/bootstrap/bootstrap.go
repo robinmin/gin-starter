@@ -2,7 +2,7 @@ package bootstrap
 
 import (
 	"context"
-	"log/slog"
+
 	"net/http"
 	"os"
 	"os/signal"
@@ -21,8 +21,10 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/creasty/defaults"
-	sloggin "github.com/samber/slog-gin"
+	"github.com/gin-contrib/gzip"
+	ginzap "github.com/gin-contrib/zap"
 	"go.uber.org/fx"
+	"go.uber.org/zap"
 	"gopkg.in/yaml.v3"
 
 	"github.com/robinmin/gin-starter/pkg/bootstrap/types"
@@ -96,58 +98,82 @@ func NewApplication(
 }
 
 func (app *Application) useMiddlewares(ctx context.Context, cfg types.AppConfig, logger *AppLogger) error {
-	// Middleware for logging
-	app.engine.Use(sloggin.NewWithConfig(logger.Logger, logger.Params.Config), gin.Recovery())
-
+	// global middlewares for error handling
 	app.engine.Use(GlobalErrorHandler())
 
+	// Middleware for logging
+	app.engine.Use(ginzap.GinzapWithConfig(logger, &ginzap.Config{
+		TimeFormat: cfg.Middlewares.Log.TimeFormat,
+		UTC:        cfg.Middlewares.Log.UTC,
+		SkipPaths:  cfg.Middlewares.Log.SkipPaths,
+	}))
+
+	// Logs all panic to error log
+	//   - stack means whether output the stack info.
+	app.engine.Use(ginzap.RecoveryWithZap(logger, true))
+
 	// Middleware for CORS
-	if cfg.System.EnableCORS {
+	if cfg.Middlewares.CORS.Enable {
 		app.engine.Use(cors.New(cors.Config{
-			AllowCredentials: true,
-			AllowOriginFunc:  func(origin string) bool { return true },
-			AllowHeaders:     []string{"*"},
-			AllowMethods:     []string{"GET", "POST", "PUT", "HEAD", "OPTIONS"},
+			AllowOriginFunc: func(origin string) bool { return true },
+
+			AllowAllOrigins:           cfg.Middlewares.CORS.AllowAllOrigins,
+			AllowMethods:              cfg.Middlewares.CORS.AllowMethods,
+			AllowPrivateNetwork:       cfg.Middlewares.CORS.AllowPrivateNetwork,
+			AllowHeaders:              cfg.Middlewares.CORS.AllowHeaders,
+			AllowCredentials:          cfg.Middlewares.CORS.AllowCredentials,
+			ExposeHeaders:             cfg.Middlewares.CORS.ExposeHeaders,
+			MaxAge:                    cfg.Middlewares.CORS.MaxAge,
+			AllowWildcard:             cfg.Middlewares.CORS.AllowWildcard,
+			AllowBrowserExtensions:    cfg.Middlewares.CORS.AllowBrowserExtensions,
+			AllowWebSockets:           cfg.Middlewares.CORS.AllowWebSockets,
+			AllowFiles:                cfg.Middlewares.CORS.AllowFiles,
+			OptionsResponseStatusCode: cfg.Middlewares.CORS.OptionsResponseStatusCode,
 		}))
 	}
 
 	// Middleware for session
-	if cfg.Redis.EnableRedisSession {
-		rstore, _ := redis.NewStoreWithDB(
-			cfg.Redis.Size,
-			cfg.Redis.Network,
-			cfg.Redis.Address,
-			cfg.Redis.Password,
-			cfg.Redis.DB,
-			[]byte(cfg.Redis.KeyPairs))
-		app.engine.Use(sessions.Sessions(cfg.Redis.SessionName, rstore))
-	} else {
-		app.engine.Use(sessions.Sessions(cfg.Redis.SessionName, cookie.NewStore([]byte(cfg.Redis.KeyPairs))))
+	if cfg.Middlewares.Session.Enable {
+		if cfg.Middlewares.Session.UseRedis {
+			rstore, _ := redis.NewStoreWithDB(
+				cfg.Redis.Size,
+				cfg.Redis.Network,
+				cfg.Redis.Address,
+				cfg.Redis.Password,
+				cfg.Redis.DB,
+				[]byte(cfg.Redis.KeyPairs))
+			app.engine.Use(sessions.Sessions(cfg.Middlewares.Session.Name, rstore))
+		} else {
+			app.engine.Use(sessions.Sessions(cfg.Middlewares.Session.Name, cookie.NewStore([]byte(cfg.Redis.KeyPairs))))
+		}
 	}
 
 	// Middleware for static files
-	if len(cfg.System.StaticDir) > 0 && len(cfg.System.StaticURL) > 0 {
-		if absPath, err := filepath.Abs(cfg.System.StaticDir); err == nil {
-			logger.Debug("URL " + cfg.System.StaticURL + " -> " + absPath)
-			app.engine.Use(static.Serve(cfg.System.StaticURL, static.LocalFile(cfg.System.StaticDir, true)))
+	if cfg.Middlewares.Static.Enable && len(cfg.Middlewares.Static.StaticDir) > 0 && len(cfg.Middlewares.Static.StaticURL) > 0 {
+		if absPath, err := filepath.Abs(cfg.Middlewares.Static.StaticDir); err == nil {
+			logger.Debug("URL " + cfg.Middlewares.Static.StaticURL + " -> " + absPath)
+			app.engine.Use(static.Serve(cfg.Middlewares.Static.StaticURL, static.LocalFile(cfg.Middlewares.Static.StaticDir, cfg.Middlewares.Static.Indexes)))
 		} else {
-			logger.Error("Failed to get absolute path of " + cfg.System.StaticDir)
+			logger.Error("Failed to get absolute path of " + cfg.Middlewares.Static.StaticDir)
 			return err
 		}
 	}
 
+	if cfg.Middlewares.Gzip.Enable {
+		app.engine.Use(gzip.Gzip(gzip.DefaultCompression))
+	}
 	return nil
 }
 
 func NewRedisCache(cfg types.AppConfig) *persistence.RedisStore {
-	if cfg.Redis.EnableRedisCache {
+	if cfg.Middlewares.Cache.Enable && cfg.Middlewares.Cache.UseRedis {
 		return persistence.NewRedisCache(cfg.Redis.Address, cfg.Redis.Password, cfg.Redis.DefaultExpiration)
 	}
 	return nil
 }
 
 func NewMemoryCache(cfg types.AppConfig) *persistence.InMemoryStore {
-	if cfg.Redis.EnableRedisCache {
+	if cfg.Middlewares.Cache.Enable && !cfg.Middlewares.Cache.UseRedis {
 		return persistence.NewInMemoryStore(cfg.Redis.DefaultExpiration)
 	}
 	return nil
@@ -157,7 +183,7 @@ func NewHttpServer(app *Application, logger *AppLogger) *http.Server {
 	return &http.Server{
 		Addr:         app.Config.ServerAddr,
 		Handler:      app.engine,
-		ErrorLog:     slog.NewLogLogger(logger.Handler(), slog.LevelWarn),
+		ErrorLog:     logger.GetRawLogger(),
 		IdleTimeout:  defaultIdleTimeout,
 		ReadTimeout:  defaultReadTimeout,
 		WriteTimeout: defaultWriteTimeout,
@@ -180,7 +206,7 @@ func (app *Application) RunServer(logger *AppLogger) error {
 
 	app.lifeCycle.Append(fx.Hook{
 		OnStart: func(context.Context) error {
-			logger.Info("Starting server", slog.Group("server", "addr", app.server.Addr))
+			logger.Info("Starting server", zap.String("server address", app.server.Addr))
 
 			go func() {
 				err := app.server.ListenAndServe()
@@ -189,11 +215,11 @@ func (app *Application) RunServer(logger *AppLogger) error {
 				}
 			}()
 
-			logger.Info("Succeeded to start HTTP Server at", slog.Group("server", "addr", app.server.Addr))
+			logger.Info("Succeeded to start HTTP Server at", zap.String("server address", app.server.Addr))
 			return nil
 		},
 		OnStop: func(ctx context.Context) error {
-			logger.Info("Stopped server", slog.Group("server", "addr", app.server.Addr))
+			logger.Info("Stopped server", zap.String("server address", app.server.Addr))
 
 			err := <-shutdownErrorChan
 			if err != nil {
@@ -206,7 +232,14 @@ func (app *Application) RunServer(logger *AppLogger) error {
 	return nil
 }
 
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// ////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// For simulating ternary expressions that golang lacks
+// func ifelse[T any](condition bool, true_part T, false_part T) T {
+// 	if condition {
+// 		return true_part
+// 	}
+// 	return false_part
+// }
 
 // create instance and load default values which defined in the struct definition
 func NewInstance[T any]() *T {

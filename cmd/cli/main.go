@@ -7,8 +7,8 @@ import (
 	"github.com/robinmin/gin-starter/config"
 	"github.com/robinmin/gin-starter/pkg/bootstrap"
 	"github.com/robinmin/gin-starter/pkg/bootstrap/types"
-	sloggin "github.com/samber/slog-gin"
 	"go.uber.org/fx"
+	"go.uber.org/fx/fxevent"
 )
 
 var (
@@ -39,6 +39,14 @@ func newMyAppConfig() *config.MyAppConfig {
 }
 
 func main() {
+	// ctx := context.Background()
+	// Initialize logger.
+	cleanLoggerFn, err := bootstrap.InitLogger()
+	if err != nil {
+		panic(err)
+	}
+	defer cleanLoggerFn()
+
 	// parse command line arguments and show help only if specified
 	flag.Parse()
 	if help {
@@ -50,15 +58,18 @@ func main() {
 	bootstrap.SetErrorInfo(config.ErrorCodeMapping)
 
 	fx.New(
+		fx.WithLogger(func(log *bootstrap.AppLogger) fxevent.Logger {
+			return &fxevent.ZapLogger{Logger: log.Logger}
+		}),
 		// configurations for logger and config file items
 		fx.Provide(newMyAppConfig),
 		fx.Provide(func(cfg *config.MyAppConfig) types.AppConfig {
 			sc := cfg.Basic
 			sc.Sentry.EventsMeta = config.SentryEventsMeta
-			sc.Log.Config = sloggin.Config{
-				WithSpanID:  true,
-				WithTraceID: true,
-			}
+			// sc.Log.Config = sloggin.Config{
+			// 	WithSpanID:  true,
+			// 	WithTraceID: true,
+			// }
 			return sc
 		}),
 
