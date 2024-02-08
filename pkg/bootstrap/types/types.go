@@ -27,12 +27,14 @@ type AppSysConfig struct {
 
 // Definitions for database configuration
 type AppDBConfig struct {
-	Type     string `yaml:"dbtype,omitempty" json:"dbtype,omitempty" default:"sqlite3"`
-	Host     string `yaml:"dbhost,omitempty" json:"dbhost,omitempty" default:"localhost"`
-	Port     int    `yaml:"dbport,omitempty" json:"dbport,omitempty" default:"3306"`
-	Database string `yaml:"dbname,omitempty" json:"dbname,omitempty" default:"database"`
-	User     string `yaml:"dbuser,omitempty" json:"dbuser,omitempty" default:"user"`
-	Password string `yaml:"dbpassword,omitempty" json:"dbpassword,omitempty" default:""`
+	Type         string `yaml:"dbtype,omitempty" json:"dbtype,omitempty" default:"sqlite3"`
+	Host         string `yaml:"dbhost,omitempty" json:"dbhost,omitempty" default:"localhost"`
+	Port         int    `yaml:"dbport,omitempty" json:"dbport,omitempty" default:"3306"`
+	Database     string `yaml:"dbname,omitempty" json:"dbname,omitempty" default:"database"`
+	User         string `yaml:"dbuser,omitempty" json:"dbuser,omitempty" default:"user"`
+	Password     string `yaml:"dbpassword,omitempty" json:"dbpassword,omitempty" default:""`
+	MaxOpenConns int    `yaml:"max_open_conns,omitempty" json:"max_open_conns,omitempty" default:"10"`
+	MaxIdleConns int    `yaml:"max_idle_conns,omitempty" json:"max_idle_conns,omitempty" default:"10"`
 }
 
 // Definitions for redis configuration
@@ -41,7 +43,7 @@ type AppRedisConfig struct {
 	Network           string        `yaml:"network,omitempty" json:"network,omitempty" default:"tcp"`                       // tcp or udp
 	Address           string        `yaml:"address,omitempty" json:"address,omitempty" default:"localhost:6379"`            // host:port of redis server
 	Password          string        `yaml:"password,omitempty" json:"password,omitempty" default:""`                        // redis-password
-	DB                string        `yaml:"db,omitempty" json:"db,omitempty" default:"0"`                                   // database
+	DB                int           `yaml:"db,omitempty" json:"db,omitempty" default:"0"`                                   // database
 	KeyPairs          string        `yaml:"key_pairs,omitempty" json:"key_pairs,omitempty" default:""`                      // Keys are defined in pairs to allow key rotation, but the common case is to set a single authentication key and optionally an encryption key.
 	DefaultExpiration time.Duration `yaml:"default_expiration,omitempty" json:"default_expiration,omitempty" default:"10m"` // default expiration time for redis cache
 	// EnableRedisCache  bool          `yaml:"enable_redis_cache,omitempty" json:"enable_redis_cache,omitempty" default:"true"` // use redis cache
@@ -143,5 +145,11 @@ type AppConfig struct {
 		Gzip struct {
 			Enable bool `yaml:"enable,omitempty" json:"enable,omitempty" default:"true"`
 		} `yaml:"gzip,omitempty" json:"gzip,omitempty"`
+
+		Auth struct {
+			Enable    bool   `yaml:"enable,omitempty" json:"enable,omitempty" default:"true"`
+			ModelFile string `yaml:"model_file,omitempty" json:"model_file,omitempty" default:"./config/model.yaml"`
+			TableName string `yaml:"table_name,omitempty" json:"table_name,omitempty" default:"auth_policy"`
+		} `yaml:"auth,omitempty" json:"auth,omitempty"`
 	} `yaml:"middlewares,omitempty" json:"middlewares,omitempty"`
 }

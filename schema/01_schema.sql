@@ -1,0 +1,12 @@
+-- table for storing policy rules
+CREATE TABLE IF NOT EXISTS `auth_policy` (
+  `id` INTEGER,
+  `ptype` VARCHAR(32) NOT NULL DEFAULT '',
+  `v0` VARCHAR(255) NOT NULL DEFAULT '',
+  `v1` VARCHAR(255) NOT NULL DEFAULT '',
+  `v2` VARCHAR(255) NOT NULL DEFAULT '',
+  `v3` VARCHAR(255) NOT NULL DEFAULT '',
+  `v4` VARCHAR(255) NOT NULL DEFAULT '',
+  `v5` VARCHAR(255) NOT NULL DEFAULT '',
+  PRIMARY KEY (`id`)
+);

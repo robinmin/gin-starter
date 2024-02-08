@@ -6,12 +6,11 @@ import "go.uber.org/fx"
 var Module = fx.Module("bootstrap",
 	fx.Provide(
 		NewAppLogger,
-		// NewDBParams,
+		NewRedisPool,
 		NewDB,
 		NewSentry,
 		NewApplication,
-		NewRedisCache,
-		NewMemoryCache,
+		NewCache,
 		// NewHttpServer,
 	),
 )

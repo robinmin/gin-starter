@@ -11,23 +11,27 @@ import (
 	"syscall"
 	"time"
 
+	"go.uber.org/zap"
+
+	"github.com/gomodule/redigo/redis"
+
 	status "github.com/appleboy/gin-status-api"
+	"github.com/gin-contrib/authz"
 	"github.com/gin-contrib/cache/persistence"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-contrib/sessions/cookie"
-	"github.com/gin-contrib/sessions/redis"
+	rsession "github.com/gin-contrib/sessions/redis"
 	"github.com/gin-contrib/static"
 	"github.com/gin-gonic/gin"
 
 	"github.com/creasty/defaults"
 	"github.com/gin-contrib/gzip"
 	ginzap "github.com/gin-contrib/zap"
-	"go.uber.org/fx"
-	"go.uber.org/zap"
-	"gopkg.in/yaml.v3"
 
 	"github.com/robinmin/gin-starter/pkg/bootstrap/types"
+	"go.uber.org/fx"
+	"gopkg.in/yaml.v3"
 )
 
 const (
@@ -58,6 +62,7 @@ func NewApplication(
 	cfg types.AppConfig,
 	lc fx.Lifecycle,
 	sty *AppSentry,
+	rds *RedisPool,
 	logger *AppLogger,
 ) *Application {
 	app := &Application{
@@ -84,7 +89,7 @@ func NewApplication(
 	}
 
 	// The middleware functions are executed in the order they are defined.
-	if err = app.useMiddlewares(context.Background(), cfg, logger); err != nil {
+	if err = app.useMiddlewares(context.Background(), cfg, rds, logger); err != nil {
 		logger.Error("Failed to enable all middlewares: " + err.Error())
 	}
 
@@ -97,7 +102,7 @@ func NewApplication(
 	return app
 }
 
-func (app *Application) useMiddlewares(ctx context.Context, cfg types.AppConfig, logger *AppLogger) error {
+func (app *Application) useMiddlewares(ctx context.Context, cfg types.AppConfig, rds *RedisPool, logger *AppLogger) error {
 	// global middlewares for error handling
 	app.engine.Use(GlobalErrorHandler())
 
@@ -135,13 +140,7 @@ func (app *Application) useMiddlewares(ctx context.Context, cfg types.AppConfig,
 	// Middleware for session
 	if cfg.Middlewares.Session.Enable {
 		if cfg.Middlewares.Session.UseRedis {
-			rstore, _ := redis.NewStoreWithDB(
-				cfg.Redis.Size,
-				cfg.Redis.Network,
-				cfg.Redis.Address,
-				cfg.Redis.Password,
-				cfg.Redis.DB,
-				[]byte(cfg.Redis.KeyPairs))
+			rstore, _ := rsession.NewStoreWithPool((*redis.Pool)(rds), []byte(cfg.Redis.KeyPairs))
 			app.engine.Use(sessions.Sessions(cfg.Middlewares.Session.Name, rstore))
 		} else {
 			app.engine.Use(sessions.Sessions(cfg.Middlewares.Session.Name, cookie.NewStore([]byte(cfg.Redis.KeyPairs))))
@@ -163,19 +162,57 @@ func (app *Application) useMiddlewares(ctx context.Context, cfg types.AppConfig,
 	if cfg.Middlewares.Gzip.Enable {
 		app.engine.Use(gzip.Gzip(gzip.DefaultCompression))
 	}
-	return nil
-}
 
-func NewRedisCache(cfg types.AppConfig) *persistence.RedisStore {
-	if cfg.Middlewares.Cache.Enable && cfg.Middlewares.Cache.UseRedis {
-		return persistence.NewRedisCache(cfg.Redis.Address, cfg.Redis.Password, cfg.Redis.DefaultExpiration)
+	// Middleware for authentication
+	if cfg.Middlewares.Auth.Enable {
+		efcer, err := NewAuthEnforcer(cfg, logger)
+		if err != nil {
+			logger.Error("Failed to create instance of enforcer for authentication" + err.Error())
+			return err
+		}
+		app.engine.Use(authz.NewAuthorizer(efcer))
 	}
 	return nil
 }
 
-func NewMemoryCache(cfg types.AppConfig) *persistence.InMemoryStore {
-	if cfg.Middlewares.Cache.Enable && !cfg.Middlewares.Cache.UseRedis {
-		return persistence.NewInMemoryStore(cfg.Redis.DefaultExpiration)
+type RedisPool redis.Pool
+
+// NewRedisClient 函数
+func NewRedisPool(cfg types.AppConfig) (*RedisPool, error) {
+	// 创建 Redis 连接池
+	pool := &redis.Pool{
+		MaxIdle:     5,
+		MaxActive:   10,
+		IdleTimeout: 240 * time.Second,
+		Dial: func() (redis.Conn, error) {
+			return redis.Dial(
+				"tcp",
+				cfg.Redis.Address,
+				redis.DialPassword(cfg.Redis.Password),
+				redis.DialDatabase(cfg.Redis.DB),
+			)
+		},
+	}
+
+	// 测试连接
+	conn := pool.Get()
+	defer conn.Close()
+
+	_, err := conn.Do("PING")
+	if err != nil {
+		return nil, err
+	}
+
+	return (*RedisPool)(pool), nil
+}
+
+func NewCache(cfg types.AppConfig, rds *RedisPool) persistence.CacheStore {
+	if cfg.Middlewares.Cache.Enable {
+		if cfg.Middlewares.Cache.UseRedis && rds != nil {
+			return persistence.NewRedisCacheWithPool((*redis.Pool)(rds), cfg.Redis.DefaultExpiration)
+		} else {
+			return persistence.NewInMemoryStore(cfg.Redis.DefaultExpiration)
+		}
 	}
 	return nil
 }
