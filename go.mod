@@ -8,6 +8,7 @@ require (
 	github.com/creasty/defaults v1.7.0
 	github.com/daixiang0/gci v0.12.1
 	github.com/getsentry/sentry-go v0.25.0
+	github.com/gin-contrib/authz v1.0.0
 	github.com/gin-contrib/cache v1.2.0
 	github.com/gin-contrib/cors v1.5.0
 	github.com/gin-contrib/gzip v0.0.6
@@ -17,6 +18,7 @@ require (
 	github.com/gin-gonic/gin v1.9.1
 	github.com/glebarez/sqlite v1.10.0
 	github.com/golangci/golangci-lint v1.55.2
+	github.com/gomodule/redigo v2.0.0+incompatible
 	github.com/google/uuid v1.3.1
 	github.com/jmoiron/sqlx v1.3.5
 	github.com/memwey/casbin-sqlx-adapter v0.3.0
@@ -107,7 +109,6 @@ require (
 	github.com/golangci/misspell v0.4.1 // indirect
 	github.com/golangci/revgrep v0.5.2 // indirect
 	github.com/golangci/unconvert v0.0.0-20180507085042-28b1c447d1f4 // indirect
-	github.com/gomodule/redigo v2.0.0+incompatible // indirect
 	github.com/google/go-cmp v0.6.0 // indirect
 	github.com/gordonklaus/ineffassign v0.0.0-20230610083614-0e73809eb601 // indirect
 	github.com/gorilla/context v1.1.1 // indirect
