@@ -49,7 +49,7 @@ basic:
   redis:
     size: 10
     network: tcp
-    address: localhost:6379
+    address: 127.0.0.1:6379
     password:
     db: 0
     key_pairs:
