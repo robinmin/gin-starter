@@ -20,7 +20,6 @@ type UserDefinedEventMap map[UserDefinedEvent]UserDefinedEventMeta
 type AppSysConfig struct {
 	DebugMode          bool   `yaml:"debug_mode,omitempty" json:"debug_mode,omitempty" default:"false"`
 	ServerAddr         string `yaml:"server_address,omitempty" json:"server_address,omitempty" default:":7086"`
-	EnableAuth         bool   `yaml:"enable_auth,omitempty" json:"enable_auth,omitempty" default:"true"`
 	ExternalSvrAddress string `yaml:"external_svr_address,omitempty" json:"external_svr_address,omitempty" default:""`
 	TrustedProxies     string `yaml:"trusted_proxies,omitempty" json:"trusted_proxies,omitempty" default:"127.0.0.1;10.0.0.0/8"`
 }
@@ -149,7 +148,7 @@ type AppConfig struct {
 		Auth struct {
 			Enable    bool   `yaml:"enable,omitempty" json:"enable,omitempty" default:"true"`
 			ModelFile string `yaml:"model_file,omitempty" json:"model_file,omitempty" default:"./config/model.yaml"`
-			TableName string `yaml:"table_name,omitempty" json:"table_name,omitempty" default:"auth_policy"`
+			TableName string `yaml:"table_name,omitempty" json:"table_name,omitempty" default:"auth_rules"`
 		} `yaml:"auth,omitempty" json:"auth,omitempty"`
 	} `yaml:"middlewares,omitempty" json:"middlewares,omitempty"`
 }

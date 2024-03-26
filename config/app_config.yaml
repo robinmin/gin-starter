@@ -2,7 +2,6 @@ basic:
   system:
     debug_mode: false
     server_address: :7086
-    enable_auth: true
     external_svr_address: http://localhost:7086/
     trusted_proxies: 127.0.0.1;10.0.0.0/8
     static_dir: ./static
@@ -37,6 +36,10 @@ basic:
       static_dir: ./static
       static_url: /static
       indexes: true
+    auth:
+      enable: true
+      model_file: ./config/model.yaml
+      table_name: auth_rules
   database:
     # dbtype: mysql
     # dbhost: 127.0.0.1
@@ -45,7 +48,7 @@ basic:
     # dbuser: user
     # dbpassword: password
     dbtype: sqlite3
-    dbname: log/app.db
+    dbname: log/gin-stater.db
   redis:
     size: 10
     network: tcp

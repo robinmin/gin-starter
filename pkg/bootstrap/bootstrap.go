@@ -16,7 +16,6 @@ import (
 	"github.com/gomodule/redigo/redis"
 
 	status "github.com/appleboy/gin-status-api"
-	"github.com/gin-contrib/authz"
 	"github.com/gin-contrib/cache/persistence"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-contrib/sessions"
@@ -165,12 +164,8 @@ func (app *Application) useMiddlewares(ctx context.Context, cfg types.AppConfig,
 
 	// Middleware for authentication
 	if cfg.Middlewares.Auth.Enable {
-		efcer, err := NewAuthEnforcer(cfg, logger)
-		if err != nil {
-			logger.Error("Failed to create instance of enforcer for authentication" + err.Error())
-			return err
-		}
-		app.engine.Use(authz.NewAuthorizer(efcer))
+		author, _ := NewAuthorizer(cfg, logger)
+		app.engine.Use(author.AuthorizerHandler())
 	}
 	return nil
 }

@@ -7,6 +7,7 @@ require (
 	github.com/casbin/casbin/v2 v2.81.0
 	github.com/creasty/defaults v1.7.0
 	github.com/daixiang0/gci v0.12.1
+	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/getsentry/sentry-go v0.25.0
 	github.com/gin-contrib/authz v1.0.0
 	github.com/gin-contrib/cache v1.2.0
@@ -25,6 +26,7 @@ require (
 	github.com/rs/xid v1.5.0
 	go.uber.org/fx v1.20.1
 	go.uber.org/zap v1.25.0
+	golang.org/x/crypto v0.17.0
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
 	gopkg.in/yaml.v3 v3.0.1
 	mvdan.cc/gofumpt v0.5.0
@@ -226,7 +228,6 @@ require (
 	go.uber.org/dig v1.17.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/arch v0.5.0 // indirect
-	golang.org/x/crypto v0.17.0 // indirect
 	golang.org/x/exp v0.0.0-20230522175609-2e198f4a06a1 // indirect
 	golang.org/x/exp/typeparams v0.0.0-20230307190834-24139beb5833 // indirect
 	golang.org/x/mod v0.13.0 // indirect
