@@ -1,6 +1,6 @@
 module github.com/robinmin/gin-starter
 
-go 1.21.4
+go 1.21
 
 require (
 	github.com/appleboy/gin-status-api v1.1.0
